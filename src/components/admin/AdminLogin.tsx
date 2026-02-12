@@ -60,16 +60,17 @@ export const AdminLogin: React.FC = () => {
         </div>
       </div>
 
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-        <div className="w-full max-w-md">
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 text-purple-200 hover:text-white mb-6"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Customer Portal
-          </button>
+      <div className="w-full lg:w-1/2 flex flex-col p-8 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <button
+          onClick={() => navigate('/')}
+          className="self-start flex items-center gap-2 text-purple-200 hover:text-white"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Customer Portal
+        </button>
 
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 mb-6">
               <Shield className="w-10 h-10 text-white" />
@@ -151,6 +152,7 @@ export const AdminLogin: React.FC = () => {
 
           <div className="mt-6 text-center text-purple-200 text-sm">
             <p>Authorized personnel only</p>
+          </div>
           </div>
         </div>
       </div>

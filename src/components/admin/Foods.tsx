@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { apiService } from '../../services/api';
 import { Plus, Edit, Trash2, Search, ImagePlus } from 'lucide-react';
@@ -55,7 +55,10 @@ export const Foods: React.FC = () => {
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState('');
+  const [previewObjectUrl, setPreviewObjectUrl] = useState<string | null>(null);
+  const [brokenImageIds, setBrokenImageIds] = useState<Set<string>>(new Set());
   const [removeImage, setRemoveImage] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   const categoryNameById = useMemo(() => {
     const map: Record<string, string> = {};
@@ -70,6 +73,14 @@ export const Foods: React.FC = () => {
     loadData();
   }, [token]);
 
+  useEffect(() => {
+    return () => {
+      if (previewObjectUrl) {
+        URL.revokeObjectURL(previewObjectUrl);
+      }
+    };
+  }, [previewObjectUrl]);
+
   const loadData = async () => {
     if (!token) return;
     setIsLoading(true);
@@ -79,6 +90,7 @@ export const Foods: React.FC = () => {
         apiService.getFoodCategories(),
       ]);
       setFoods(foodsResponse);
+      setBrokenImageIds(new Set());
       setCategories(categoriesResponse);
     } catch {
       toast.error('Failed to load foods and categories');
@@ -104,7 +116,14 @@ export const Foods: React.FC = () => {
       setImagePreviewUrl('');
     }
     setImageFile(null);
+    if (previewObjectUrl) {
+      URL.revokeObjectURL(previewObjectUrl);
+      setPreviewObjectUrl(null);
+    }
     setRemoveImage(false);
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
     setIsModalOpen(true);
   };
 
@@ -113,8 +132,15 @@ export const Foods: React.FC = () => {
     setEditingFood(null);
     setFormData({ name: '', description: '', price: '', categoryId: '', available: true });
     setImageFile(null);
+    if (previewObjectUrl) {
+      URL.revokeObjectURL(previewObjectUrl);
+      setPreviewObjectUrl(null);
+    }
     setImagePreviewUrl('');
     setRemoveImage(false);
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
   };
 
   const handleCategoryCreate = async () => {
@@ -266,11 +292,24 @@ export const Foods: React.FC = () => {
               {filteredFoods.map((food) => (
                 <tr key={food.id} className="hover:bg-slate-50">
                   <td className="px-6 py-4">
-                    <div className="w-14 h-14 rounded-lg bg-slate-100 overflow-hidden">
-                      {food.imageUrl ? (
-                        <img src={food.imageUrl} alt={food.name} className="w-full h-full object-cover" />
+                    <div className="w-16 h-16 rounded-xl border border-slate-200 bg-slate-100 overflow-hidden flex items-center justify-center">
+                      {food.imageUrl && !brokenImageIds.has(food.id) ? (
+                        <img
+                          src={food.imageUrl}
+                          alt={food.name}
+                          className="w-full h-full object-cover"
+                          onError={() => {
+                            setBrokenImageIds((prev) => {
+                              const next = new Set(prev);
+                              next.add(food.id);
+                              return next;
+                            });
+                          }}
+                        />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-xs text-slate-500">No Image</div>
+                        <div className="w-full h-full flex items-center justify-center text-[11px] text-slate-500 text-center px-1">
+                          No Image
+                        </div>
                       )}
                     </div>
                   </td>
@@ -310,9 +349,9 @@ export const Foods: React.FC = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 md:items-center">
           <div className="absolute inset-0 bg-black/50" onClick={handleCloseModal} />
-          <div className="relative bg-white rounded-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="relative bg-white rounded-2xl p-8 max-w-lg w-full max-h-[calc(100vh-2rem)] overflow-y-auto">
             <h3 className="text-2xl font-semibold mb-6">
               {editingFood ? 'Edit Meal' : 'Add Meal'}
             </h3>
@@ -374,6 +413,7 @@ export const Foods: React.FC = () => {
                   <ImagePlus className="w-5 h-5 text-slate-500" />
                   <span className="text-sm text-slate-600">{imageFile ? imageFile.name : 'Choose image file'}</span>
                   <input
+                    ref={imageInputRef}
                     type="file"
                     accept="image/png,image/jpeg,image/webp,image/gif"
                     className="hidden"
@@ -381,9 +421,16 @@ export const Foods: React.FC = () => {
                       const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
                       setImageFile(file);
                       setRemoveImage(false);
-                      if (file) {
-                        setImagePreviewUrl(URL.createObjectURL(file));
+                      if (previewObjectUrl) {
+                        URL.revokeObjectURL(previewObjectUrl);
+                        setPreviewObjectUrl(null);
                       }
+                      if (file) {
+                        const objectUrl = URL.createObjectURL(file);
+                        setPreviewObjectUrl(objectUrl);
+                        setImagePreviewUrl(objectUrl);
+                      }
+                      e.currentTarget.value = '';
                     }}
                   />
                 </label>
@@ -392,13 +439,36 @@ export const Foods: React.FC = () => {
                     <input
                       type="checkbox"
                       checked={removeImage}
-                      onChange={(e) => setRemoveImage(e.target.checked)}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setRemoveImage(checked);
+                        if (checked) {
+                          setImageFile(null);
+                          if (previewObjectUrl) {
+                            URL.revokeObjectURL(previewObjectUrl);
+                            setPreviewObjectUrl(null);
+                          }
+                          if (imageInputRef.current) {
+                            imageInputRef.current.value = '';
+                          }
+                        }
+                      }}
                     />
                     Remove existing image
                   </label>
                 )}
                 {imagePreviewUrl && !removeImage && (
-                  <img src={imagePreviewUrl} alt="Preview" className="mt-3 w-full h-40 object-cover rounded-xl border border-slate-200" />
+                  <div
+                    className="mt-3 rounded-xl border border-slate-200 bg-slate-100 overflow-hidden flex items-center justify-center"
+                    style={{ width: '160px', height: '160px' }}
+                  >
+                    <img
+                      src={imagePreviewUrl}
+                      alt="Preview"
+                      className="object-cover"
+                      style={{ width: '100%', height: '100%' }}
+                    />
+                  </div>
                 )}
               </div>
 

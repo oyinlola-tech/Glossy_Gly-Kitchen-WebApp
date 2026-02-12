@@ -68,10 +68,17 @@ class ApiService {
       (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      ...fetchOptions,
-      headers,
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}${endpoint}`, {
+        ...fetchOptions,
+        headers,
+      });
+    } catch (error) {
+      const fallbackBase = this.baseUrl || 'configured API base URL';
+      const message = error instanceof Error ? error.message : 'Network error';
+      throw new Error(`Cannot reach API server (${fallbackBase}). ${message}`);
+    }
 
     const payload = await response.json().catch(() => ({}));
 
@@ -147,6 +154,32 @@ class ApiService {
 
   private asArray<T>(value: any): T[] {
     return Array.isArray(value) ? value : [];
+  }
+
+  private resolveImageUrl(value?: string): string | undefined {
+    if (!value || typeof value !== 'string') return undefined;
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    if (
+      trimmed.startsWith('http://') ||
+      trimmed.startsWith('https://') ||
+      trimmed.startsWith('data:') ||
+      trimmed.startsWith('blob:')
+    ) {
+      return trimmed;
+    }
+
+    const normalizedPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+    if (!this.baseUrl) {
+      return normalizedPath;
+    }
+
+    try {
+      const resolved = new URL(normalizedPath, this.baseUrl);
+      return resolved.toString();
+    } catch {
+      return normalizedPath;
+    }
   }
 
   private mapUserAuth(data: any) {
@@ -316,7 +349,7 @@ class ApiService {
       ...food,
       price: Number(food.price ?? 0),
       categoryId: food.categoryId || food.category_id || null,
-      imageUrl: food.imageUrl || food.image_url || undefined,
+      imageUrl: this.resolveImageUrl(food.imageUrl || food.image_url),
       currency: (food.currency || 'NGN').toUpperCase(),
       available: food.available !== undefined ? Boolean(food.available) : true,
     }));
@@ -331,7 +364,7 @@ class ApiService {
       ...food,
       price: Number(food.price ?? 0),
       categoryId: food.categoryId || food.category_id || null,
-      imageUrl: food.imageUrl || food.image_url || undefined,
+      imageUrl: this.resolveImageUrl(food.imageUrl || food.image_url),
       currency: (food.currency || 'NGN').toUpperCase(),
       available: food.available !== undefined ? Boolean(food.available) : true,
     }));

@@ -330,6 +330,27 @@ const buildAccountDeletedGoodbyeEmail = ({ email }) => {
   return { subject, ...body };
 };
 
+const buildAdminLoginOtpEmail = ({ otp }) => {
+  const subject = `${appName} - Admin Login Verification`;
+  const body = baseTemplate({
+    variant: 'critical',
+    title: 'Admin Access Verification Required',
+    preheader: 'Your admin login verification code',
+    intro: 'A privileged sign-in attempt was detected from a new admin device or network.',
+    contentHtml: `
+      ${otpBlock(otp, 'Admin Verification Code', 'critical')}
+      <p style="margin:10px 0 0;"><strong>Important:</strong> This code expires in 10 minutes and grants administrative access.</p>
+      ${securityTipsBlock([
+        'Only enter this code on the official Glossy Gly Kitchen admin portal.',
+        'If this attempt was not initiated by you, reset your admin password immediately.',
+        'Report suspicious access attempts to support without delay.',
+      ], 'critical', 'Privileged access safeguards')}
+    `,
+    outro: `If this request was not initiated by you, do not use this code.\n${appName} Priority Security`,
+  });
+  return { subject, ...body };
+};
+
 module.exports = {
   buildSignupVerificationEmail,
   buildLoginOtpEmail,
@@ -339,4 +360,5 @@ module.exports = {
   buildWelcomeEmail,
   buildAccountDeletionOtpEmail,
   buildAccountDeletedGoodbyeEmail,
+  buildAdminLoginOtpEmail,
 };

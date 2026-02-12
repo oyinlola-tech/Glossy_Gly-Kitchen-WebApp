@@ -11,6 +11,7 @@ const { safeEqual } = require('../utils/adminAuth');
 const generateOtp = require('../utils/generateOtp');
 const { sendMail } = require('../utils/mailer');
 const { isLocked, recordFailure, clearFailures } = require('../utils/otpGuard');
+const { buildAdminLoginOtpEmail } = require('../utils/emailTemplates');
 
 const DUMMY_PASSWORD_HASH = '$2a$10$7EqJtq98hPqEX7fNZaFWoOaJY8fDeihh5Z8SGvtQvE4H14R/2uOe';
 const COUPON_CODE_REGEX = /^[A-Z0-9_-]{4,40}$/;
@@ -73,19 +74,12 @@ const getDeviceFingerprint = (req, bodyDeviceId) => {
 };
 
 const sendAdminOtpEmail = async (email, otp) => {
+  const template = buildAdminLoginOtpEmail({ otp });
   await sendMail({
     to: email,
-    subject: 'Glossy Gly Kitchen - Admin Login OTP Verification',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #0f766e;">Glossy Gly Kitchen Admin Security Check</h2>
-        <p>A login was detected from a new device or IP. Use this OTP to continue:</p>
-        <div style="background: #f5f5f5; padding: 15px; font-size: 24px; font-weight: bold; text-align: center; letter-spacing: 5px;">
-          ${otp}
-        </div>
-        <p>This code expires in 10 minutes.</p>
-      </div>
-    `,
+    subject: template.subject,
+    html: template.html,
+    text: template.text,
   });
 };
 
