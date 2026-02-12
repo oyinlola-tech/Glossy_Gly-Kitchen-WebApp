@@ -5,6 +5,35 @@ interface RequestOptions extends RequestInit {
   skipAuthRetry?: boolean;
 }
 
+export interface SavedCardDto {
+  id: string;
+  bank?: string;
+  card_type?: string;
+  last4?: string;
+  exp_month?: string;
+  exp_year?: string;
+  is_default?: number;
+}
+
+export interface DisputeDto {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+  category?: string;
+  created_at: string;
+}
+
+export interface AuditLogDto {
+  id: string;
+  action: string;
+  method: string;
+  path: string;
+  status_code: number;
+  ip_address: string;
+  created_at: string;
+}
+
 class ApiService {
   private baseUrl: string;
 
@@ -63,19 +92,11 @@ class ApiService {
   }
 
   private getStoredValue(key: string) {
-    return sessionStorage.getItem(key) || localStorage.getItem(key);
+    return sessionStorage.getItem(key);
   }
 
-  private setStoredValue(key: string, value: string, persist = false) {
+  private setStoredValue(key: string, value: string) {
     sessionStorage.setItem(key, value);
-    if (persist) {
-      localStorage.setItem(key, value);
-    }
-  }
-
-  private getIsPersistentSession(isAdmin: boolean) {
-    const markerKey = isAdmin ? 'adminSessionPersistent' : 'userSessionPersistent';
-    return localStorage.getItem(markerKey) === 'true';
   }
 
   private async tryRefreshSession(isAdmin: boolean): Promise<{ token: string; refreshToken: string } | null> {
@@ -99,9 +120,8 @@ class ApiService {
         return null;
       }
 
-      const persist = this.getIsPersistentSession(isAdmin);
-      this.setStoredValue(keys.token, token, persist);
-      this.setStoredValue(keys.refreshToken, nextRefreshToken, persist);
+      this.setStoredValue(keys.token, token);
+      this.setStoredValue(keys.refreshToken, nextRefreshToken);
       window.dispatchEvent(new CustomEvent('auth:session-updated', { detail: { isAdmin } }));
 
       return { token, refreshToken: nextRefreshToken };
@@ -475,12 +495,12 @@ class ApiService {
     });
   }
 
-  async getSavedCards(token: string) {
+  async getSavedCards(token: string): Promise<SavedCardDto[]> {
     const response: any = await this.request(API_CONFIG.ENDPOINTS.PAYMENTS.CARDS, {
       method: 'GET',
       token,
     });
-    return this.asArray(response?.cards || response);
+    return this.asArray<SavedCardDto>(response?.cards || response);
   }
 
   async saveCardFromReference(token: string, reference: string) {
@@ -700,12 +720,12 @@ class ApiService {
     return this.asArray(response?.referralCodes || response);
   }
 
-  async getDisputes(token: string) {
+  async getDisputes(token: string): Promise<DisputeDto[]> {
     const response: any = await this.request(API_CONFIG.ENDPOINTS.ADMIN.DISPUTES, {
       method: 'GET',
       token,
     });
-    return this.asArray(response?.disputes || response);
+    return this.asArray<DisputeDto>(response?.disputes || response);
   }
 
   async createDispute(token: string, data: any) {
@@ -747,12 +767,12 @@ class ApiService {
     });
   }
 
-  async getAuditLogs(token: string) {
+  async getAuditLogs(token: string): Promise<AuditLogDto[]> {
     const response: any = await this.request(API_CONFIG.ENDPOINTS.ADMIN.AUDIT_LOGS, {
       method: 'GET',
       token,
     });
-    return this.asArray(response?.logs || response);
+    return this.asArray<AuditLogDto>(response?.logs || response);
   }
 }
 

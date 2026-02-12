@@ -27,7 +27,7 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const readStorageValue = (key: string) => sessionStorage.getItem(key) || localStorage.getItem(key);
+  const readStorageValue = (key: string) => sessionStorage.getItem(key);
   const clearStorageValue = (key: string) => {
     sessionStorage.removeItem(key);
     localStorage.removeItem(key);

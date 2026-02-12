@@ -78,14 +78,32 @@ export const ForgotPassword: React.FC = () => {
     }
   };
 
+  const resendOtp = async () => {
+    if (!email) {
+      toast.error('Email is required');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await apiService.requestPasswordReset(email);
+      toast.success('OTP resent to your email');
+      setOtp(['', '', '', '', '', '']);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to resend OTP');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleOtpChange = (index: number, value: string) => {
-    if (value.length > 1) return;
+    const numeric = value.replace(/\D/g, '');
+    if (numeric.length > 1) return;
 
     const newOtp = [...otp];
-    newOtp[index] = value;
+    newOtp[index] = numeric;
     setOtp(newOtp);
 
-    if (value && index < 5) {
+    if (numeric && index < 5) {
       const nextInput = document.getElementById(`reset-otp-${index + 1}`);
       nextInput?.focus();
     }
@@ -201,7 +219,7 @@ export const ForgotPassword: React.FC = () => {
               <div className="text-center">
                 <button
                   type="button"
-                  onClick={() => handleRequestOtp({ preventDefault: () => {} } as any)}
+                  onClick={resendOtp}
                   className="text-amber-600 hover:text-amber-700 text-sm font-medium"
                 >
                   Resend Code

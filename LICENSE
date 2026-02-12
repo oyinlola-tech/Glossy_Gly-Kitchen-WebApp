@@ -52,3 +52,18 @@ For permissions, licensing inquiries, or commercial terms:
 
 12. Entire Agreement
 This License constitutes the entire agreement between You and the Author regarding the Software, unless superseded by a separate written agreement signed by the Author.
+
+13. Third-Party Components
+13.1 The Software may include or rely on third-party packages, libraries, fonts, APIs, and other components that are licensed separately by their respective owners.
+13.2 Your use of such third-party components is subject to their own license terms in addition to this License.
+13.3 This License does not grant rights to third-party trademarks, branding, or assets except where explicitly permitted by those owners.
+
+14. Plain-Language Summary (Non-Binding)
+14.1 You can review and run this project for personal evaluation and learning.
+14.2 You cannot republish, resell, deploy commercially, or present the project as your own without written permission.
+14.3 If you need commercial or production rights, contact the Author for a separate commercial agreement.
+14.4 This summary is informational only. Sections 1-13 control legally.
+
+15. Versioning
+15.1 This is Glossy-Gly-Kitchen Proprietary License v1.0.
+15.2 The Author may publish updated license versions for future releases of the Software.

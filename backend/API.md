@@ -1,11 +1,44 @@
 # Glossy-Gly-Kitchen API Reference
 
-Base URL: `http://localhost:3000`
+Base URL: `http://localhost:3000`  
+Content type: `application/json`
 
-## Auth
+## Conventions
+- Auth header: `Authorization: Bearer <accessToken>`
+- UUID identifiers are used across users/orders/payments/admin entities.
+- Most list endpoints support pagination with query params:
+  - `page` (default `1`)
+  - `limit` (default `20`, max `100`)
+- Standard error payload:
+```json
+{
+  "error": "Human readable message"
+}
+```
+
+## Authentication Summary
+- Access tokens are short-lived JWTs.
+- Refresh tokens are rotated server-side via `/auth/refresh` and `/admin/auth/refresh`.
+- Logout endpoints revoke refresh tokens.
+
+---
+
+## Auth (User)
 
 ### POST `/auth/signup`
-Body: `email`, `password`, optional `phone`, `referralCode`
+Body:
+- `email` (required)
+- `password` (required)
+- `phone` (optional)
+- `referralCode` (optional)
+
+Response (201):
+```json
+{
+  "message": "User registered successfully. Please verify your account.",
+  "userId": "uuid"
+}
+```
 
 ### POST `/auth/verify`
 Body: `userId`, `otp`
@@ -38,15 +71,6 @@ Response includes temporary `resetToken`.
 ### POST `/auth/forgot-password/reset`
 Body: `resetToken`, `newPassword`
 
-### POST `/auth/delete-account/request-otp`
-Headers: user bearer token  
-Sends OTP to the authenticated user's email for account deletion confirmation.
-
-### DELETE `/auth/delete-account`
-Headers: user bearer token  
-Body: `otp` (6 digits)  
-Deletes account permanently after OTP verification.
-
 ### POST `/auth/refresh`
 Body: `refreshToken`
 
@@ -64,20 +88,38 @@ Headers: user bearer token
 Headers: user bearer token  
 Body supports:
 - `phone`
-- `currentPassword` + `newPassword` (for in-app password change)
+- `currentPassword` + `newPassword` (password change)
 
 ### POST `/auth/referral-code/generate`
 Headers: user bearer token
 
+### POST `/auth/delete-account/request-otp`
+Headers: user bearer token
+
+### DELETE `/auth/delete-account`
+Headers: user bearer token  
+Body: `otp` (6 digits)
+
+---
+
 ## Foods
 
 ### GET `/foods`
+Public menu listing (available items).
+
+### GET `/foods/categories`
+Public food categories.
 
 ### GET `/foods/:id`
+Get a single food item.
+
+### GET `/foods/admin/all`
+Headers: admin bearer token  
+Admin-only full item listing.
 
 ### POST `/foods`
 Headers: admin bearer token  
-Body: `name`, `price`, optional `description`, `category`
+Body: `name`, `price`, optional `description`, `category`, `categoryId`, `currency`, `imageDataUrl`, `imageFileName`
 
 ### PUT `/foods/:id`
 Headers: admin bearer token
@@ -85,8 +127,20 @@ Headers: admin bearer token
 ### DELETE `/foods/:id`
 Headers: admin bearer token
 
-## Cart
+### POST `/foods/categories`
+Headers: admin bearer token  
+Body: `name`
 
+### PUT `/foods/categories/:id`
+Headers: admin bearer token  
+Body: `name`
+
+### DELETE `/foods/categories/:id`
+Headers: admin bearer token
+
+---
+
+## Cart
 All cart routes require user bearer token.
 
 ### POST `/cart`
@@ -99,13 +153,18 @@ Body: `foodId`, `quantity`
 
 ### DELETE `/cart`
 
-## Orders
+---
 
+## Orders
 User routes require user bearer token.
 
 ### POST `/orders`
+Create order from current cart.
 
 ### GET `/orders`
+Query params:
+- `status` (optional)
+- `page`, `limit` (optional)
 
 ### GET `/orders/:id`
 
@@ -118,34 +177,52 @@ Body: `couponCode`
 ### DELETE `/orders/:id/coupon`
 
 ### POST `/orders/:id/cancel`
+Customer cancellation (pending orders only).
 
 ### PATCH `/orders/:id/status`
 Headers: admin bearer token  
 Body: `status`
 
-## Payments
+---
 
+## Payments
 User payment routes require user bearer token.
 
 ### POST `/payments/initialize`
-Body: `orderId`, optional `callbackUrl`, `saveCard`
+Body:
+- `orderId` (required)
+- `callbackUrl` (optional, `https` only if supplied)
+- `saveCard` (optional)
+
+Response fields include:
+- `reference`
+- `authorizationUrl`
+- `accessCode`
 
 ### GET `/payments/verify/:reference`
+Verifies payment and updates order/payment state.
 
 ### POST `/payments/cards`
-Body: `reference`
+Body: `reference`  
+Attach reusable card from successful payment reference.
 
 ### GET `/payments/cards`
+List user saved cards.
 
 ### PATCH `/payments/cards/:cardId/default`
+Set default saved card.
 
 ### DELETE `/payments/cards/:cardId`
+Delete saved card.
 
 ### POST `/payments/pay-with-saved-card`
 Body: `orderId`, `cardId`
 
 ### POST `/payments/webhook/paystack`
-Public webhook. Signature required via `x-paystack-signature`.
+Public webhook endpoint.  
+Requires valid `x-paystack-signature`.
+
+---
 
 ## Admin
 
@@ -173,61 +250,87 @@ Headers: admin bearer token
 Headers: admin bearer token
 
 ### POST `/admin/admins`
-Headers: admin bearer token (super admin)
+Headers: admin bearer token (super admin only)
 
 ### GET `/admin/users`
-Headers: admin bearer token
+Headers: admin bearer token  
+Query params (optional): `search`, `verified`, `suspended`, `page`, `limit`
 
 ### GET `/admin/users/:id`
 Headers: admin bearer token
 
 ### PATCH `/admin/users/:id/status`
-Headers: admin bearer token
+Headers: admin bearer token  
+Body supports `verified`, `isSuspended`
 
 ### GET `/admin/orders`
-Headers: admin bearer token
+Headers: admin bearer token  
+Query params (optional): `status`, `userId`, `page`, `limit`
 
 ### GET `/admin/orders/:id`
 Headers: admin bearer token
 
 ### PATCH `/admin/orders/:id/status`
-Headers: admin bearer token
+Headers: admin bearer token  
+Body: `status`
 
 ### POST `/admin/coupons`
-Headers: admin bearer token
+Headers: admin bearer token  
+Body:
+- `code` (optional, autogenerated when omitted)
+- `description` (optional)
+- `discountType` (`percentage` or `fixed`)
+- `discountValue`
+- `maxRedemptions` (optional)
+- `startsAt` (optional ISO datetime)
+- `expiresAt` (optional ISO datetime)
+- `isActive` (optional boolean)
 
 ### GET `/admin/coupons`
-Headers: admin bearer token
+Headers: admin bearer token  
+Query params (optional): `active`, `page`, `limit`
 
 ### POST `/admin/referral-codes`
-Headers: admin bearer token
+Headers: admin bearer token  
+Body: `userId`, optional `code`
 
 ### GET `/admin/referral-codes`
-Headers: admin bearer token
+Headers: admin bearer token  
+Query params (optional): `userId`, `code`, `page`, `limit`
 
 ### POST `/admin/disputes`
-Headers: admin bearer token
+Headers: admin bearer token  
+Body: `title`, `description`, optional `orderId`, `userId`, `priority`, `category`, `assignedAdminId`
 
 ### GET `/admin/disputes`
-Headers: admin bearer token
+Headers: admin bearer token  
+Query params (optional): `status`, `priority`, `assignedAdminId`, `page`, `limit`
 
 ### GET `/admin/disputes/:id`
 Headers: admin bearer token
 
 ### PATCH `/admin/disputes/:id`
-Headers: admin bearer token
+Headers: admin bearer token  
+Body supports: `status`, `priority`, `category`, `assignedAdminId`, `resolutionNotes`
 
 ### POST `/admin/disputes/:id/resolve`
-Headers: admin bearer token
+Headers: admin bearer token  
+Body: `resolutionNotes`
 
 ### POST `/admin/disputes/:id/comments`
-Headers: admin bearer token
+Headers: admin bearer token  
+Body: `comment`, optional `isInternal`
 
 ### GET `/admin/audit-logs`
-Headers: admin bearer token
+Headers: admin bearer token  
+Query params (optional): `action`, `method`, `statusCode`, `requestId`, `from`, `to`, `page`, `limit`
+
+---
 
 ## System
 
 ### GET `/health`
+Health-check endpoint.
 
 ### GET `/ready`
+Readiness-check endpoint.

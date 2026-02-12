@@ -4,8 +4,42 @@ const { isTransitionAllowed } = require('../utils/statusTransitions');
 const { isUuid, toInt } = require('../utils/validation');
 
 const COUPON_CODE_REGEX = /^[A-Z0-9_-]{4,40}$/;
+const SIMPLE_PHONE_REGEX = /^[0-9+\-() ]{7,30}$/;
 
 const normalizeCouponCode = (value) => String(value || '').trim().toUpperCase();
+const cleanText = (value, max = 255) => {
+  if (value === undefined || value === null) return null;
+  const normalized = String(value).trim();
+  if (!normalized) return null;
+  return normalized.slice(0, max);
+};
+
+const normalizeAddressInput = (value) => {
+  const source = value && typeof value === 'object' ? value : {};
+  return {
+    label: cleanText(source.label, 100),
+    recipientName: cleanText(source.recipientName || source.recipient_name, 120),
+    phone: cleanText(source.phone, 30),
+    addressLine1: cleanText(source.addressLine1 || source.address_line1, 255),
+    addressLine2: cleanText(source.addressLine2 || source.address_line2, 255),
+    city: cleanText(source.city, 120),
+    state: cleanText(source.state, 120),
+    country: cleanText(source.country, 120) || 'Nigeria',
+    postalCode: cleanText(source.postalCode || source.postal_code, 30),
+    notes: cleanText(source.notes, 500),
+  };
+};
+
+const validateAddressInput = (address) => {
+  if (!address.recipientName) return 'recipientName is required';
+  if (!address.phone) return 'phone is required';
+  if (!SIMPLE_PHONE_REGEX.test(address.phone)) return 'Invalid phone';
+  if (!address.addressLine1) return 'addressLine1 is required';
+  if (!address.city) return 'city is required';
+  if (!address.state) return 'state is required';
+  if (!address.country) return 'country is required';
+  return null;
+};
 
 const validateCouponWindow = (coupon) => {
   if (!coupon || !coupon.is_active) return { valid: false, reason: 'Coupon is not active' };
@@ -111,7 +145,9 @@ exports.listMyOrders = async (req, res) => {
     );
 
     const [orders] = await db.query(
-      `SELECT id, user_id, total_amount, discount_amount, payable_amount, coupon_code, status, created_at, updated_at
+      `SELECT id, user_id, total_amount, discount_amount, payable_amount, coupon_code, status, created_at, updated_at,
+              delivery_address_id, delivery_label, delivery_recipient_name, delivery_phone, delivery_address_line1,
+              delivery_address_line2, delivery_city, delivery_state, delivery_country, delivery_postal_code, delivery_notes
        FROM orders
        ${whereClause}
        ORDER BY created_at DESC

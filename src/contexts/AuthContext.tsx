@@ -13,11 +13,11 @@ interface AuthContextType {
   token: string | null;
   refreshToken: string | null;
   isLoading: boolean;
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<any>;
+  login: (email: string, password: string) => Promise<any>;
   signup: (email: string, password: string, phone?: string, referralCode?: string) => Promise<any>;
   logout: () => Promise<void>;
   verifyOtp: (userId: string, otp: string) => Promise<any>;
-  setAuthData: (data: { user: User; token: string; refreshToken: string }, rememberMe?: boolean) => void;
+  setAuthData: (data: { user: User; token: string; refreshToken: string }) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,7 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const readStorageValue = (key: string) => sessionStorage.getItem(key) || localStorage.getItem(key);
+  const readStorageValue = (key: string) => sessionStorage.getItem(key);
   const clearStorageValue = (key: string) => {
     sessionStorage.removeItem(key);
     localStorage.removeItem(key);
@@ -59,7 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 user: profile?.user || profile,
                 token: nextToken,
                 refreshToken: nextRefresh,
-              }, localStorage.getItem('userSessionPersistent') === 'true');
+              });
               return;
             }
           } catch {
@@ -69,7 +69,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clearStorageValue('token');
         clearStorageValue('refreshToken');
         clearStorageValue('user');
-        localStorage.removeItem('userSessionPersistent');
         setToken(null);
         setRefreshToken(null);
         setUser(null);
@@ -90,30 +89,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => window.removeEventListener('auth:session-updated', syncSessionState);
   }, []);
 
-  const setAuthData = (data: { user: User; token: string; refreshToken: string }, rememberMe = false) => {
+  const setAuthData = (data: { user: User; token: string; refreshToken: string }) => {
     setUser(data.user);
     setToken(data.token);
     setRefreshToken(data.refreshToken);
+    clearStorageValue('token');
+    clearStorageValue('refreshToken');
+    clearStorageValue('user');
     sessionStorage.setItem('token', data.token);
     sessionStorage.setItem('refreshToken', data.refreshToken);
     sessionStorage.setItem('user', JSON.stringify(data.user));
-    if (rememberMe) {
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('refreshToken', data.refreshToken);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('userSessionPersistent', 'true');
-    } else {
-      clearStorageValue('token');
-      clearStorageValue('refreshToken');
-      clearStorageValue('user');
-      sessionStorage.setItem('token', data.token);
-      sessionStorage.setItem('refreshToken', data.refreshToken);
-      sessionStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.removeItem('userSessionPersistent');
-    }
   };
 
-  const login = async (email: string, password: string, rememberMe = false) => {
+  const login = async (email: string, password: string) => {
     const response = await apiService.login({ email, password });
     if (response.token) {
       const profile = await apiService.getMe(response.token);
@@ -121,7 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user: profile?.user || profile,
         token: response.token,
         refreshToken: response.refreshToken,
-      }, rememberMe);
+      });
     }
     return response;
   };
@@ -159,7 +147,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clearStorageValue('token');
     clearStorageValue('refreshToken');
     clearStorageValue('user');
-    localStorage.removeItem('userSessionPersistent');
   };
 
   return (

@@ -32,6 +32,26 @@ const TABLE_DEFINITIONS = [
     UNIQUE KEY unique_user_provider (user_id, provider),
     INDEX idx_social_accounts_user (user_id)
   )`,
+  `CREATE TABLE IF NOT EXISTS user_addresses (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    label VARCHAR(100),
+    recipient_name VARCHAR(120) NOT NULL,
+    phone VARCHAR(30) NOT NULL,
+    address_line1 VARCHAR(255) NOT NULL,
+    address_line2 VARCHAR(255),
+    city VARCHAR(120) NOT NULL,
+    state VARCHAR(120) NOT NULL,
+    country VARCHAR(120) NOT NULL DEFAULT 'Nigeria',
+    postal_code VARCHAR(30),
+    notes VARCHAR(500),
+    is_default BOOLEAN DEFAULT FALSE,
+    created_at DATETIME,
+    updated_at DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_addresses_user (user_id),
+    INDEX idx_user_addresses_default (user_id, is_default)
+  )`,
   `CREATE TABLE IF NOT EXISTS food_items (
     id VARCHAR(36) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -62,12 +82,25 @@ const TABLE_DEFINITIONS = [
     coupon_code VARCHAR(40),
     coupon_discount_type ENUM('percentage','fixed'),
     coupon_discount_value DECIMAL(10,2),
+    delivery_address_id VARCHAR(36),
+    delivery_label VARCHAR(100),
+    delivery_recipient_name VARCHAR(120),
+    delivery_phone VARCHAR(30),
+    delivery_address_line1 VARCHAR(255),
+    delivery_address_line2 VARCHAR(255),
+    delivery_city VARCHAR(120),
+    delivery_state VARCHAR(120),
+    delivery_country VARCHAR(120),
+    delivery_postal_code VARCHAR(30),
+    delivery_notes VARCHAR(500),
     status ENUM('pending','confirmed','preparing','out_for_delivery','completed','cancelled') DEFAULT 'pending',
     created_at DATETIME,
     updated_at DATETIME,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (delivery_address_id) REFERENCES user_addresses(id) ON DELETE SET NULL,
     INDEX idx_orders_coupon_id (coupon_id),
-    INDEX idx_orders_coupon_code (coupon_code)
+    INDEX idx_orders_coupon_code (coupon_code),
+    INDEX idx_orders_delivery_address_id (delivery_address_id)
   )`,
   `CREATE TABLE IF NOT EXISTS cart_items (
     id VARCHAR(36) PRIMARY KEY,
@@ -431,6 +464,83 @@ const ensureDatabaseAndTables = async () => {
       tableName: 'orders',
       columnName: 'coupon_discount_value',
       definition: 'coupon_discount_value DECIMAL(10,2)',
+    });
+    await ensureColumnExists({
+      connection: adminConnection,
+      dbName,
+      tableName: 'orders',
+      columnName: 'delivery_address_id',
+      definition: 'delivery_address_id VARCHAR(36)',
+    });
+    await ensureColumnExists({
+      connection: adminConnection,
+      dbName,
+      tableName: 'orders',
+      columnName: 'delivery_label',
+      definition: 'delivery_label VARCHAR(100)',
+    });
+    await ensureColumnExists({
+      connection: adminConnection,
+      dbName,
+      tableName: 'orders',
+      columnName: 'delivery_recipient_name',
+      definition: 'delivery_recipient_name VARCHAR(120)',
+    });
+    await ensureColumnExists({
+      connection: adminConnection,
+      dbName,
+      tableName: 'orders',
+      columnName: 'delivery_phone',
+      definition: 'delivery_phone VARCHAR(30)',
+    });
+    await ensureColumnExists({
+      connection: adminConnection,
+      dbName,
+      tableName: 'orders',
+      columnName: 'delivery_address_line1',
+      definition: 'delivery_address_line1 VARCHAR(255)',
+    });
+    await ensureColumnExists({
+      connection: adminConnection,
+      dbName,
+      tableName: 'orders',
+      columnName: 'delivery_address_line2',
+      definition: 'delivery_address_line2 VARCHAR(255)',
+    });
+    await ensureColumnExists({
+      connection: adminConnection,
+      dbName,
+      tableName: 'orders',
+      columnName: 'delivery_city',
+      definition: 'delivery_city VARCHAR(120)',
+    });
+    await ensureColumnExists({
+      connection: adminConnection,
+      dbName,
+      tableName: 'orders',
+      columnName: 'delivery_state',
+      definition: 'delivery_state VARCHAR(120)',
+    });
+    await ensureColumnExists({
+      connection: adminConnection,
+      dbName,
+      tableName: 'orders',
+      columnName: 'delivery_country',
+      definition: 'delivery_country VARCHAR(120)',
+    });
+    await ensureColumnExists({
+      connection: adminConnection,
+      dbName,
+      tableName: 'orders',
+      columnName: 'delivery_postal_code',
+      definition: 'delivery_postal_code VARCHAR(30)',
+    });
+    await ensureColumnExists({
+      connection: adminConnection,
+      dbName,
+      tableName: 'orders',
+      columnName: 'delivery_notes',
+      definition: 'delivery_notes VARCHAR(500)',
     });
     await ensureColumnExists({
       connection: adminConnection,

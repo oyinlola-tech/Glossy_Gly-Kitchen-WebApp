@@ -47,6 +47,10 @@ export const router = createBrowserRouter([
     element: <ForgotPassword />,
   },
   {
+    path: '/payment/callback',
+    element: <PaymentCallback />,
+  },
+  {
     path: '/',
     element: (
       <ProtectedRoute>
@@ -73,10 +77,6 @@ export const router = createBrowserRouter([
       {
         path: 'checkout/:orderId',
         element: <Checkout />,
-      },
-      {
-        path: 'payment/callback',
-        element: <PaymentCallback />,
       },
     ],
   },

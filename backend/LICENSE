@@ -1,11 +1,31 @@
-Copyright (c) 2026 Oluwayemi Oyinlola Michael
+Glossy-Gly-Kitchen Backend Proprietary License Notice
+Copyright (c) 2026 Oluwayemi Oyinlola
 
 All rights reserved.
 
-This software and associated source code are proprietary and confidential.
-No part of this software may be copied, modified, distributed, sublicensed,
-or used in any form without prior written permission from the copyright holder.
+1. Scope
+1.1 This notice applies specifically to the `backend/` directory and its contents.
+1.2 The backend code, API logic, migrations, and supporting files are proprietary.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+2. Permission
+2.1 You may inspect and run the backend locally for personal evaluation, learning, and testing.
+2.2 Any production deployment, commercial use, redistribution, resale, sublicensing, or public mirroring requires prior written permission from the copyright holder.
+
+3. Restrictions
+3.1 You may not remove authorship or legal notices.
+3.2 You may not represent this backend implementation as your own original work.
+3.3 You may not distribute modified or unmodified backend copies publicly without permission.
+
+4. No Warranty
+THE BACKEND SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+5. Liability Limitation
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE COPYRIGHT HOLDER IS NOT LIABLE FOR INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR EXEMPLARY DAMAGES OR ANY LOSS OF DATA, PROFITS, OR BUSINESS INTERRUPTION.
+
+6. Relationship to Root License
+6.1 This backend license notice complements the root repository `LICENSE`.
+6.2 Where terms overlap, apply the stricter interpretation unless a separate written agreement states otherwise.
+
+7. Permissions and Commercial Inquiries
+- Author: Oluwayemi Oyinlola
+- Portfolio: https://oyinlola.site
