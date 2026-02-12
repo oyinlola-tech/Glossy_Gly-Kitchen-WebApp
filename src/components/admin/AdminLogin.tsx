@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { Shield, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 export const AdminLogin: React.FC = () => {
   const navigate = useNavigate();

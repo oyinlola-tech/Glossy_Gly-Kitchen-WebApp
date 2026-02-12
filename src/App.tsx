@@ -2,7 +2,7 @@ import { RouterProvider } from 'react-router';
 import { router } from './routes';
 import { AuthProvider } from './contexts/AuthContext';
 import { AdminAuthProvider } from './contexts/AdminAuthContext';
-import { Toaster } from 'sonner@2.0.3';
+import { Toaster } from 'sonner';
 
 export default function App() {
   return (

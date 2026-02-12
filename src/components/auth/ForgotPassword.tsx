@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { apiService } from '../../services/api';
 import { Mail, Lock, ArrowLeft } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 export const ForgotPassword: React.FC = () => {
   const navigate = useNavigate();

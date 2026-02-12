@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { apiService } from '../../services/api';
 import { CreditCard, Tag, ArrowLeft } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface Order {
   id: string;

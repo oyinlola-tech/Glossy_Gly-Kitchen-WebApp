@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { apiService } from '../../services/api';
 import { Plus, Tag } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface Coupon {
   id: string;
