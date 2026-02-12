@@ -146,8 +146,9 @@ export const Signup: React.FC = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
+                  autoComplete="email"
                   className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-amber-500 transition-colors"
-                  placeholder="your@email.com"
+                  placeholder="oluwayemioyinlola2@gmail.com"
                   required
                 />
               </div>
@@ -162,6 +163,7 @@ export const Signup: React.FC = () => {
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
+                  autoComplete="tel"
                   className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-amber-500 transition-colors"
                   placeholder="+1 (555) 000-0000"
                 />
@@ -177,6 +179,7 @@ export const Signup: React.FC = () => {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
+                  autoComplete="new-password"
                   className="w-full pl-12 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-amber-500 transition-colors"
                   placeholder="........"
                   required
@@ -200,6 +203,7 @@ export const Signup: React.FC = () => {
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
+                  autoComplete="new-password"
                   className="w-full pl-12 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-amber-500 transition-colors"
                   placeholder="........"
                   required
@@ -223,6 +227,7 @@ export const Signup: React.FC = () => {
                   name="referralCode"
                   value={formData.referralCode}
                   onChange={handleChange}
+                  autoComplete="off"
                   className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-amber-500 transition-colors"
                   placeholder="Enter referral code"
                 />
@@ -281,4 +286,3 @@ export const Signup: React.FC = () => {
     </div>
   );
 };
-

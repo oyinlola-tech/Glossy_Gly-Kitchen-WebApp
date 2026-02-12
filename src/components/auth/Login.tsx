@@ -119,8 +119,9 @@ export const Login: React.FC = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
                   className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-amber-500 transition-colors"
-                  placeholder="your@email.com"
+                  placeholder="oluwayemioyinlola2@gmail.com"
                   required
                 />
               </div>
@@ -134,6 +135,7 @@ export const Login: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
                   className="w-full pl-12 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-amber-500 transition-colors"
                   placeholder="........"
                   required
@@ -210,4 +212,3 @@ export const Login: React.FC = () => {
     </div>
   );
 };
-
