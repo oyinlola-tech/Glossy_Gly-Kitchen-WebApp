@@ -56,7 +56,7 @@ const buildReceiptEmail = ({ customerEmail, orderId, paymentReference, status, i
   <div style="margin:0;padding:32px 12px;background:linear-gradient(135deg,#fff7ed 0%,#fff 45%,#f8fafc 100%);font-family:Segoe UI,Arial,sans-serif;color:#0f172a;">
     <div style="max-width:760px;margin:0 auto;background:#fff;border:1px solid #ececec;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(2,6,23,0.08);">
       <div style="padding:28px 30px;background:linear-gradient(120deg,#fb923c 0%,#ea580c 100%);color:#fff;">
-        <div style="font-size:13px;letter-spacing:1.4px;text-transform:uppercase;opacity:0.88;">Glossy_Gly-Kitchen</div>
+        <div style="font-size:13px;letter-spacing:1.4px;text-transform:uppercase;opacity:0.88;">Glossy Gly Kitchen</div>
         <h1 style="margin:8px 0 0;font-size:26px;line-height:1.2;">Order Receipt</h1>
       </div>
 
@@ -105,7 +105,7 @@ const buildReceiptEmail = ({ customerEmail, orderId, paymentReference, status, i
   </div>`;
 
   const text = [
-    'Glossy_Gly-Kitchen - Order Receipt',
+    'Glossy Gly Kitchen - Order Receipt',
     `Status: ${title}`,
     `Order ID: ${orderId}`,
     `Payment Reference: ${paymentReference || 'N/A'}`,

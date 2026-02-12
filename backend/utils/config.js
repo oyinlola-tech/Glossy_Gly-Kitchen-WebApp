@@ -84,8 +84,7 @@ const validateConfig = () => {
   requireNumberInRangeEnv('RATE_LIMIT_MAX', 20, 2000);
   requirePositiveNumberEnv('AUTH_RATE_LIMIT_MAX');
   requireNumberInRangeEnv('AUTH_RATE_LIMIT_MAX', 3, 200);
-  requirePositiveNumberEnv('OTP_IDENTITY_RATE_LIMIT_MAX');
-  requireNumberInRangeEnv('OTP_IDENTITY_RATE_LIMIT_MAX', 3, 200);
+  validateOptionalNumberInRangeEnv('OTP_IDENTITY_RATE_LIMIT_MAX', 3, 200);
   requirePositiveNumberEnv('ADMIN_AUTH_RATE_LIMIT_MAX');
   requireNumberInRangeEnv('ADMIN_AUTH_RATE_LIMIT_MAX', 3, 200);
   validateOptionalNumberInRangeEnv('AUTH_PROFILE_RATE_LIMIT_MAX', 20, 2000);

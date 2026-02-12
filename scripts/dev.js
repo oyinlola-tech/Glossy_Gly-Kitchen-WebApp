@@ -10,7 +10,7 @@ const runProcess = (name, args, cwd) => {
   const child = spawn(npmCmd, args, {
     cwd,
     stdio: 'inherit',
-    shell: false,
+    shell: isWindows,
     env: process.env,
   });
 

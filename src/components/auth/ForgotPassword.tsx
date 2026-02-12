@@ -135,16 +135,17 @@ export const ForgotPassword: React.FC = () => {
         </div>
       </div>
 
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gradient-to-br from-amber-50 via-white to-rose-50">
-        <div className="w-full max-w-md">
-          <button
-            onClick={() => step === 'email' ? navigate('/login') : setStep(step === 'otp' ? 'email' : 'otp')}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </button>
+      <div className="w-full lg:w-1/2 flex flex-col p-8 bg-gradient-to-br from-amber-50 via-white to-rose-50">
+        <button
+          onClick={() => step === 'email' ? navigate('/login') : setStep(step === 'otp' ? 'email' : 'otp')}
+          className="self-start flex items-center gap-2 text-gray-600 hover:text-gray-900"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </button>
 
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-amber-600 to-rose-600 mb-4">
               {step === 'reset' ? <Lock className="w-8 h-8 text-white" /> : <Mail className="w-8 h-8 text-white" />}
@@ -273,6 +274,7 @@ export const ForgotPassword: React.FC = () => {
               </button>
             </form>
           )}
+          </div>
         </div>
       </div>
     </div>

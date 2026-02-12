@@ -75,10 +75,10 @@ const getDeviceFingerprint = (req, bodyDeviceId) => {
 const sendAdminOtpEmail = async (email, otp) => {
   await sendMail({
     to: email,
-    subject: 'Glossy_Gly-Kitchen - Admin Login OTP Verification',
+    subject: 'Glossy Gly Kitchen - Admin Login OTP Verification',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #0f766e;">Glossy_Gly-Kitchen Admin Security Check</h2>
+        <h2 style="color: #0f766e;">Glossy Gly Kitchen Admin Security Check</h2>
         <p>A login was detected from a new device or IP. Use this OTP to continue:</p>
         <div style="background: #f5f5f5; padding: 15px; font-size: 24px; font-weight: bold; text-align: center; letter-spacing: 5px;">
           ${otp}
