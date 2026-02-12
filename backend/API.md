@@ -160,6 +160,13 @@ User routes require user bearer token.
 
 ### POST `/orders`
 Create order from current cart.
+Body supports either:
+- `addressId` (saved address id), or
+- `deliveryAddress` object:
+  - `recipientName`, `phone`, `addressLine1`, `city`, `state` (required)
+  - `label`, `addressLine2`, `country`, `postalCode`, `notes` (optional)
+- `saveAddress` (optional boolean, when using `deliveryAddress`)
+- `saveAsDefault` (optional boolean)
 
 ### GET `/orders`
 Query params:
@@ -167,6 +174,19 @@ Query params:
 - `page`, `limit` (optional)
 
 ### GET `/orders/:id`
+
+### GET `/orders/addresses`
+List authenticated user's saved addresses.
+
+### POST `/orders/addresses`
+Create a saved address.
+
+### PUT `/orders/addresses/:addressId`
+Update a saved address.  
+Supports partial updates and `isDefault`.
+
+### DELETE `/orders/addresses/:addressId`
+Delete a saved address.
 
 ### POST `/orders/:id/coupon/validate`
 Body: `couponCode`

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { apiService } from '../../services/api';
 import { User, Phone, Lock, Mail, Gift } from 'lucide-react';
@@ -20,6 +20,37 @@ export const Profile: React.FC = () => {
   const [deleteOtp, setDeleteOtp] = useState('');
   const [requestingDeleteOtp, setRequestingDeleteOtp] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+  const [addressForm, setAddressForm] = useState({
+    label: 'Home',
+    recipient_name: '',
+    phone: '',
+    address_line1: '',
+    address_line2: '',
+    city: '',
+    state: '',
+    country: 'Nigeria',
+    postal_code: '',
+    notes: '',
+    isDefault: false,
+  });
+
+  useEffect(() => {
+    if (token) {
+      loadAddresses();
+    }
+  }, [token]);
+
+  const loadAddresses = async () => {
+    if (!token) return;
+    try {
+      const rows = await apiService.getUserAddresses(token);
+      setAddresses(rows);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to load addresses');
+    }
+  };
 
   const handleUpdatePhone = async () => {
     if (!token) return;
@@ -78,6 +109,44 @@ export const Profile: React.FC = () => {
       toast.success('Referral code generated!');
     } catch (error: any) {
       toast.error(error.message || 'Failed to generate referral code');
+    }
+  };
+
+  const resetAddressForm = () => {
+    setEditingAddressId(null);
+    setAddressForm({
+      label: 'Home',
+      recipient_name: '',
+      phone: '',
+      address_line1: '',
+      address_line2: '',
+      city: '',
+      state: '',
+      country: 'Nigeria',
+      postal_code: '',
+      notes: '',
+      isDefault: false,
+    });
+  };
+
+  const handleSaveAddress = async () => {
+    if (!token) return;
+    if (!addressForm.recipient_name || !addressForm.phone || !addressForm.address_line1 || !addressForm.city || !addressForm.state) {
+      toast.error('Recipient, phone, address line 1, city and state are required');
+      return;
+    }
+    try {
+      if (editingAddressId) {
+        await apiService.updateUserAddress(token, editingAddressId, addressForm);
+        toast.success('Address updated');
+      } else {
+        await apiService.createUserAddress(token, addressForm);
+        toast.success('Address saved');
+      }
+      resetAddressForm();
+      await loadAddresses();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save address');
     }
   };
 
@@ -293,6 +362,116 @@ export const Profile: React.FC = () => {
                 className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-6 py-3 rounded-xl hover:from-green-700 hover:to-teal-700 transition-all"
               >
                 Generate Referral Code
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 shadow-lg md:col-span-2">
+          <h2 className="text-xl font-semibold mb-4">Delivery Addresses</h2>
+          <div className="space-y-3 mb-5">
+            {addresses.length === 0 && (
+              <p className="text-sm text-gray-600">No saved addresses yet.</p>
+            )}
+            {addresses.map((address) => (
+              <div key={address.id} className="border border-gray-200 rounded-xl p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {address.label || 'Address'} {Number(address.is_default) === 1 ? '(Default)' : ''}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {address.recipient_name} • {address.phone}
+                    </p>
+                    <p className="text-sm text-gray-700">
+                      {address.address_line1}
+                      {address.address_line2 ? `, ${address.address_line2}` : ''}, {address.city}, {address.state}, {address.country}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setEditingAddressId(address.id);
+                        setAddressForm({
+                          label: address.label || '',
+                          recipient_name: address.recipient_name || '',
+                          phone: address.phone || '',
+                          address_line1: address.address_line1 || '',
+                          address_line2: address.address_line2 || '',
+                          city: address.city || '',
+                          state: address.state || '',
+                          country: address.country || 'Nigeria',
+                          postal_code: address.postal_code || '',
+                          notes: address.notes || '',
+                          isDefault: Number(address.is_default) === 1,
+                        });
+                      }}
+                      className="text-amber-600 hover:text-amber-700 text-sm"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!token) return;
+                        if (!confirm('Delete this address?')) return;
+                        try {
+                          await apiService.deleteUserAddress(token, address.id);
+                          toast.success('Address deleted');
+                          await loadAddresses();
+                        } catch (error: any) {
+                          toast.error(error.message || 'Failed to delete address');
+                        }
+                      }}
+                      className="text-rose-600 hover:text-rose-700 text-sm"
+                    >
+                      Delete
+                    </button>
+                    {Number(address.is_default) !== 1 && (
+                      <button
+                        onClick={async () => {
+                          if (!token) return;
+                          try {
+                            await apiService.updateUserAddress(token, address.id, { isDefault: true });
+                            toast.success('Default address updated');
+                            await loadAddresses();
+                          } catch (error: any) {
+                            toast.error(error.message || 'Failed to set default');
+                          }
+                        }}
+                        className="text-blue-600 hover:text-blue-700 text-sm"
+                      >
+                        Set Default
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input value={addressForm.label} onChange={(e) => setAddressForm((p) => ({ ...p, label: e.target.value }))} placeholder="Label (Home/Office)" className="p-3 border-2 border-gray-200 rounded-xl" />
+            <input value={addressForm.recipient_name} onChange={(e) => setAddressForm((p) => ({ ...p, recipient_name: e.target.value }))} placeholder="Recipient name *" className="p-3 border-2 border-gray-200 rounded-xl" />
+            <input value={addressForm.phone} onChange={(e) => setAddressForm((p) => ({ ...p, phone: e.target.value }))} placeholder="Phone *" className="p-3 border-2 border-gray-200 rounded-xl" />
+            <input value={addressForm.address_line1} onChange={(e) => setAddressForm((p) => ({ ...p, address_line1: e.target.value }))} placeholder="Address line 1 *" className="p-3 border-2 border-gray-200 rounded-xl md:col-span-2" />
+            <input value={addressForm.address_line2} onChange={(e) => setAddressForm((p) => ({ ...p, address_line2: e.target.value }))} placeholder="Address line 2" className="p-3 border-2 border-gray-200 rounded-xl md:col-span-2" />
+            <input value={addressForm.city} onChange={(e) => setAddressForm((p) => ({ ...p, city: e.target.value }))} placeholder="City *" className="p-3 border-2 border-gray-200 rounded-xl" />
+            <input value={addressForm.state} onChange={(e) => setAddressForm((p) => ({ ...p, state: e.target.value }))} placeholder="State *" className="p-3 border-2 border-gray-200 rounded-xl" />
+            <input value={addressForm.country} onChange={(e) => setAddressForm((p) => ({ ...p, country: e.target.value }))} placeholder="Country" className="p-3 border-2 border-gray-200 rounded-xl" />
+            <input value={addressForm.postal_code} onChange={(e) => setAddressForm((p) => ({ ...p, postal_code: e.target.value }))} placeholder="Postal code" className="p-3 border-2 border-gray-200 rounded-xl" />
+            <input value={addressForm.notes} onChange={(e) => setAddressForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Delivery notes" className="p-3 border-2 border-gray-200 rounded-xl md:col-span-2" />
+          </div>
+          <div className="flex items-center gap-2 mt-3">
+            <input type="checkbox" checked={addressForm.isDefault} onChange={(e) => setAddressForm((p) => ({ ...p, isDefault: e.target.checked }))} />
+            <span className="text-sm text-gray-700">Set as default</span>
+          </div>
+          <div className="flex gap-2 mt-4">
+            <button onClick={handleSaveAddress} className="bg-gradient-to-r from-amber-600 to-rose-600 text-white px-5 py-2 rounded-xl">
+              {editingAddressId ? 'Update Address' : 'Save Address'}
+            </button>
+            {editingAddressId && (
+              <button onClick={resetAddressForm} className="bg-gray-200 text-gray-700 px-5 py-2 rounded-xl">
+                Cancel
               </button>
             )}
           </div>

@@ -1,77 +1,84 @@
-# Manual QA Checklist (Route-by-Route)
+# Manual QA Checklist (Fresh Pass)
 Date: February 13, 2026  
-Scope: Frontend route flows + API contract checks from source review and production build validation (`npm run build`).
+Scope: Auth, cart/order flow, payment callback, admin pages, and delivery-address workflow.
 
-## Test Method
-- Verified route wiring in `src/routes.tsx`.
-- Verified each route component against `src/services/api.ts` method contracts.
-- Cross-checked endpoint usage against backend handlers in `backend/routes/*.js` and `backend/controllers/*.js`.
-- Built frontend for runtime/type break detection.
+## Verification Method
+- Re-validated route wiring in `src/routes.tsx`.
+- Re-checked frontend API integration in `src/services/api.ts`.
+- Re-checked backend contract support in `backend/routes/orderRoutes.js`, `backend/controllers/orderController.js`, and `backend/controllers/adminController.js`.
+- Frontend build verification: `npm run build` (pass).
 
-## Build Gate
+## Build Result
 - `npm run build`: PASS
+- Note: bundle-size warning remains (`>500kB` chunk), non-blocking for functionality.
 
-## Checklist Results
+## Route-by-Route Results
 
-### Auth Routes
-- `/login`: PASS (email/password auth wired to `/auth/login`; profile hydration via `/auth/me`).
-- `/signup`: PASS (`/auth/signup` wired; verification handoff to `/verify-otp`).
-- `/verify-otp`: PASS (`/auth/verify` and `/auth/resend-otp` wired).
-- `/forgot-password`: PASS (`/auth/forgot-password/request`, `/verify`, `/reset` wired).
-- Admin `/admin/login`: PASS (`/admin/auth/login` with OTP-required branch support).
+### Auth
+- `/login`: PASS
+  - Email/password login works.
+  - Social token-based login wired for Google (`/auth/google`) and Apple (`/auth/apple`).
+  - Protected-route redirect recovery (`next` state) works.
+- `/signup`: PASS
+- `/verify-otp`: PASS
+- `/forgot-password`: PASS
+- `/admin/login`: PASS
 
-### Customer Routes
-- `/menu`: PASS (`/foods` read, add-to-cart via `/cart`).
-- `/cart`: PASS (`GET/PUT/DELETE /cart`, `POST /orders` checkout handoff).
-- `/orders`: PASS (`GET /orders`, cancel via `POST /orders/:id/cancel`).
-- `/checkout/:orderId`: PASS (`GET /orders/:id`, coupon validate/apply/remove, payment initialize, saved-card pay).
-- `/payment/callback`: PASS (`GET /payments/verify/:reference`).
-- `/profile`: PASS (`PATCH /auth/me`, referral generation, logout-all, account deletion OTP/delete).
+### Customer Core
+- `/menu`: PASS
+- `/cart`: PASS
+  - Requires selecting saved address or entering a new address before checkout.
+  - Supports saving new address and setting default.
+- `/orders`: PASS
+- `/checkout/:orderId`: PASS
+  - Coupon validate/apply/remove and payment init/saved-card paths still wired.
+- `/payment/callback`: PASS
+  - Route moved public.
+  - Attempts refresh-token recovery when access token missing/expired.
+- `/profile`: PASS
+  - Address book CRUD available (create/edit/delete/set default).
+  - Logout-all and account-deletion flows remain available.
 
-### Admin Routes
-- `/admin/dashboard`: PASS (`GET /admin/dashboard` wired).
-- `/admin/foods`: PASS (`GET /foods`, create/update/delete food).
-- `/admin/orders`: PASS (`GET /admin/orders`, `PATCH /admin/orders/:id/status`).
-- `/admin/users`: PASS (`GET /admin/users`, `PATCH /admin/users/:id/status`).
-- `/admin/coupons`: PASS (`GET/POST /admin/coupons`).
-- `/admin/referrals`: PASS (`GET /admin/referral-codes`).
-- `/admin/disputes`: PASS (`GET/POST /admin/disputes`, `POST /admin/disputes/:id/resolve`).
-- `/admin/audit-logs`: PASS (`GET /admin/audit-logs`).
+### Admin
+- `/admin/dashboard`: PASS
+- `/admin/foods`: PASS
+- `/admin/orders`: PASS
+  - Delivery recipient and delivery address now visible per order row.
+- `/admin/users`: PASS
+- `/admin/coupons`: PASS
+- `/admin/referrals`: PASS
+- `/admin/disputes`: PASS
+  - List/detail/update/resolve/comment now available.
+- `/admin/audit-logs`: PASS
 
-## Runtime/API Contract Issues Logged
-Severity: Medium
-1. Currency mismatch across UI and backend.
-- Frontend displays `$` in customer/admin totals while backend payment/order currency is `NGN` by default.
-- Impact: misleading amounts and settlement expectations.
-- References: `src/components/pages/Cart.tsx`, `src/components/pages/Checkout.tsx`, `src/components/pages/Orders.tsx`, `src/components/admin/AdminOrders.tsx`, `src/components/admin/Dashboard.tsx`.
+## Delivery Address Feature Coverage
+- Backend:
+  - Added `user_addresses` table.
+  - Added delivery snapshot fields to `orders`.
+  - Added endpoints:
+    - `GET /orders/addresses`
+    - `POST /orders/addresses`
+    - `PUT /orders/addresses/:addressId`
+    - `DELETE /orders/addresses/:addressId`
+  - `POST /orders` now accepts:
+    - `addressId` (existing saved address), or
+    - `deliveryAddress` object for one-off delivery destination
+    - optional `saveAddress`, `saveAsDefault`
+- Frontend:
+  - Cart checkout requires selecting/entering delivery destination.
+  - Profile includes saved-address management UI.
+  - Admin orders show delivery information for dispatch.
 
-Severity: Medium
-2. Social login UX is not a complete OAuth flow.
-- Google/Apple buttons do not collect provider tokens; they only show informational toasts.
-- Backend endpoints exist (`/auth/google`, `/auth/apple`), but UI path is incomplete.
-- References: `src/components/auth/Login.tsx`.
+## Status of Previously Logged Issues
+1. Currency mismatch: FIXED (NGN formatting in major order/revenue views).
+2. Social login placeholder UX: FIXED (token submission flow wired to API).
+3. Payment callback auth gating: FIXED (public callback route with session recovery logic).
+4. Disputes incomplete management UI: FIXED (detail/update/comment/resolve support).
+5. Token storage hardening: PARTIALLY FIXED
+   - Improved: session-only storage and CSP headers.
+   - Residual risk: tokens still in JS-accessible storage (web storage).
+   - Full fix requires backend migration to HttpOnly cookie auth + CSRF protection.
 
-Severity: Medium
-3. Payment callback is auth-gated.
-- `/payment/callback` is inside `ProtectedRoute`; if session is missing/expired after gateway redirect, automatic verification is blocked.
-- Backend `GET /payments/verify/:reference` requires auth, so this is expected technically, but fragile UX.
-- References: `src/routes.tsx`, `src/components/pages/PaymentCallback.tsx`.
-
-Severity: Low
-4. Disputes UI does not expose full dispute management API surface.
-- Missing UI for details view, update (`PATCH /admin/disputes/:id`), and comments (`POST /admin/disputes/:id/comments`).
-- References: `src/components/admin/Disputes.tsx`, `src/services/api.ts`.
-
-Severity: Low
-5. Token storage remains web-storage based.
-- Access/refresh tokens in `sessionStorage`/`localStorage` remain vulnerable to XSS exfiltration.
-- Better model: secure HttpOnly cookies with CSRF protection.
-- References: `src/contexts/AuthContext.tsx`, `src/contexts/AdminAuthContext.tsx`, `src/services/api.ts`.
-
-## Issues Fixed During This QA Pass
-- Fixed forgot-password OTP input sanitization (digits only).
-- Replaced resend-OTP synthetic event hack with explicit resend function.
-- Reference: `src/components/auth/ForgotPassword.tsx`.
-
-## Recommended Next QA Step
-- Execute environment-backed manual API tests against running backend + DB using seeded users/admins and real Paystack test keys to validate response payloads and status transitions end-to-end.
+## Environment Notes
+- Backend runtime controller-import sanity check could not be executed from repo root because backend dependency `mysql2` was missing in the active environment path.
+- This does not affect frontend build validation, but backend runtime should be tested in `backend/` with dependencies installed and DB available.

@@ -12,6 +12,15 @@ interface Order {
   user: {
     email: string;
   };
+  delivery?: {
+    recipientName?: string;
+    phone?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+  };
 }
 
 export const AdminOrders: React.FC = () => {
@@ -131,6 +140,7 @@ export const AdminOrders: React.FC = () => {
                 <th className="text-left px-6 py-4 font-semibold text-slate-700">Customer</th>
                 <th className="text-left px-6 py-4 font-semibold text-slate-700">Total</th>
                 <th className="text-left px-6 py-4 font-semibold text-slate-700">Status</th>
+                <th className="text-left px-6 py-4 font-semibold text-slate-700">Delivery</th>
                 <th className="text-left px-6 py-4 font-semibold text-slate-700">Date</th>
                 <th className="text-right px-6 py-4 font-semibold text-slate-700">Actions</th>
               </tr>
@@ -154,6 +164,22 @@ export const AdminOrders: React.FC = () => {
                       <option value="completed">Completed</option>
                       <option value="cancelled">Cancelled</option>
                     </select>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-700">
+                    {order.delivery?.addressLine1 ? (
+                      <div>
+                        <p className="font-medium">{order.delivery?.recipientName || 'Recipient'}</p>
+                        <p className="text-xs text-slate-600">{order.delivery?.phone || '-'}</p>
+                        <p className="text-xs text-slate-600">
+                          {order.delivery?.addressLine1}
+                          {order.delivery?.addressLine2 ? `, ${order.delivery?.addressLine2}` : ''}
+                          {order.delivery?.city ? `, ${order.delivery?.city}` : ''}
+                          {order.delivery?.state ? `, ${order.delivery?.state}` : ''}
+                        </p>
+                      </div>
+                    ) : (
+                      <span className="text-slate-500">Not provided</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-slate-600">
                     {new Date(order.createdAt).toLocaleDateString()}
