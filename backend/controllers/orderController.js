@@ -167,17 +167,299 @@ exports.listMyOrders = async (req, res) => {
   }
 };
 
+exports.listMyAddresses = async (req, res) => {
+  const userId = req.user.id;
+  if (!userId || !isUuid(userId)) {
+    return res.status(400).json({ error: 'Valid userId is required' });
+  }
+
+  try {
+    const [rows] = await db.query(
+      `SELECT id, user_id, label, recipient_name, phone, address_line1, address_line2, city, state, country, postal_code, notes, is_default, created_at, updated_at
+       FROM user_addresses
+       WHERE user_id = ?
+       ORDER BY is_default DESC, updated_at DESC`,
+      [userId]
+    );
+    return res.json({ addresses: rows });
+  } catch (err) {
+    console.error('List user addresses error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+exports.createAddress = async (req, res) => {
+  const userId = req.user.id;
+  if (!userId || !isUuid(userId)) {
+    return res.status(400).json({ error: 'Valid userId is required' });
+  }
+
+  const payload = normalizeAddressInput(req.body || {});
+  const validationError = validateAddressInput(payload);
+  if (validationError) {
+    return res.status(400).json({ error: validationError });
+  }
+
+  const wantsDefault = Boolean(req.body && req.body.isDefault);
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [defaults] = await connection.query(
+      'SELECT id FROM user_addresses WHERE user_id = ? AND is_default = 1 FOR UPDATE',
+      [userId]
+    );
+    const shouldDefault = wantsDefault || defaults.length === 0;
+    if (shouldDefault) {
+      await connection.query(
+        'UPDATE user_addresses SET is_default = 0, updated_at = NOW() WHERE user_id = ?',
+        [userId]
+      );
+    }
+
+    const id = uuidv4();
+    await connection.query(
+      `INSERT INTO user_addresses
+       (id, user_id, label, recipient_name, phone, address_line1, address_line2, city, state, country, postal_code, notes, is_default, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [
+        id,
+        userId,
+        payload.label,
+        payload.recipientName,
+        payload.phone,
+        payload.addressLine1,
+        payload.addressLine2,
+        payload.city,
+        payload.state,
+        payload.country,
+        payload.postalCode,
+        payload.notes,
+        shouldDefault ? 1 : 0,
+      ]
+    );
+    const [rows] = await connection.query(
+      'SELECT * FROM user_addresses WHERE id = ?',
+      [id]
+    );
+    await connection.commit();
+    return res.status(201).json(rows[0]);
+  } catch (err) {
+    await connection.rollback();
+    console.error('Create address error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    connection.release();
+  }
+};
+
+exports.updateAddress = async (req, res) => {
+  const userId = req.user.id;
+  const { addressId } = req.params;
+  if (!userId || !isUuid(userId)) return res.status(400).json({ error: 'Valid userId is required' });
+  if (!isUuid(addressId)) return res.status(400).json({ error: 'Invalid addressId' });
+
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [rows] = await connection.query(
+      `SELECT id, user_id, label, recipient_name, phone, address_line1, address_line2, city, state, country, postal_code, notes, is_default
+       FROM user_addresses WHERE id = ? AND user_id = ? FOR UPDATE`,
+      [addressId, userId]
+    );
+    if (rows.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ error: 'Address not found' });
+    }
+
+    const existing = rows[0];
+    const incoming = normalizeAddressInput(req.body || {});
+    const merged = {
+      label: incoming.label !== null ? incoming.label : existing.label,
+      recipientName: incoming.recipientName !== null ? incoming.recipientName : existing.recipient_name,
+      phone: incoming.phone !== null ? incoming.phone : existing.phone,
+      addressLine1: incoming.addressLine1 !== null ? incoming.addressLine1 : existing.address_line1,
+      addressLine2: incoming.addressLine2 !== null ? incoming.addressLine2 : existing.address_line2,
+      city: incoming.city !== null ? incoming.city : existing.city,
+      state: incoming.state !== null ? incoming.state : existing.state,
+      country: incoming.country !== null ? incoming.country : existing.country,
+      postalCode: incoming.postalCode !== null ? incoming.postalCode : existing.postal_code,
+      notes: incoming.notes !== null ? incoming.notes : existing.notes,
+    };
+    const validationError = validateAddressInput(merged);
+    if (validationError) {
+      await connection.rollback();
+      return res.status(400).json({ error: validationError });
+    }
+
+    const wantsDefault = req.body && req.body.isDefault === true;
+    if (wantsDefault) {
+      await connection.query(
+        'UPDATE user_addresses SET is_default = 0, updated_at = NOW() WHERE user_id = ?',
+        [userId]
+      );
+    }
+
+    await connection.query(
+      `UPDATE user_addresses
+       SET label = ?, recipient_name = ?, phone = ?, address_line1 = ?, address_line2 = ?, city = ?, state = ?,
+           country = ?, postal_code = ?, notes = ?, is_default = ?, updated_at = NOW()
+       WHERE id = ? AND user_id = ?`,
+      [
+        merged.label,
+        merged.recipientName,
+        merged.phone,
+        merged.addressLine1,
+        merged.addressLine2,
+        merged.city,
+        merged.state,
+        merged.country,
+        merged.postalCode,
+        merged.notes,
+        wantsDefault ? 1 : existing.is_default,
+        addressId,
+        userId,
+      ]
+    );
+
+    const [updated] = await connection.query('SELECT * FROM user_addresses WHERE id = ?', [addressId]);
+    await connection.commit();
+    return res.json(updated[0]);
+  } catch (err) {
+    await connection.rollback();
+    console.error('Update address error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    connection.release();
+  }
+};
+
+exports.deleteAddress = async (req, res) => {
+  const userId = req.user.id;
+  const { addressId } = req.params;
+  if (!userId || !isUuid(userId)) return res.status(400).json({ error: 'Valid userId is required' });
+  if (!isUuid(addressId)) return res.status(400).json({ error: 'Invalid addressId' });
+
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [rows] = await connection.query(
+      'SELECT id, is_default FROM user_addresses WHERE id = ? AND user_id = ? FOR UPDATE',
+      [addressId, userId]
+    );
+    if (rows.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ error: 'Address not found' });
+    }
+    const wasDefault = Boolean(rows[0].is_default);
+    await connection.query('DELETE FROM user_addresses WHERE id = ? AND user_id = ?', [addressId, userId]);
+    if (wasDefault) {
+      const [candidate] = await connection.query(
+        'SELECT id FROM user_addresses WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1',
+        [userId]
+      );
+      if (candidate.length > 0) {
+        await connection.query('UPDATE user_addresses SET is_default = 1, updated_at = NOW() WHERE id = ?', [candidate[0].id]);
+      }
+    }
+    await connection.commit();
+    return res.json({ message: 'Address deleted' });
+  } catch (err) {
+    await connection.rollback();
+    console.error('Delete address error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    connection.release();
+  }
+};
+
 // -------------------- POST /orders (Create order from cart) --------------------
 exports.createOrder = async (req, res) => {
   const userId = req.user.id;
+  const { addressId, deliveryAddress, saveAddress, saveAsDefault } = req.body || {};
 
   if (!userId || !isUuid(userId)) {
     return res.status(400).json({ error: 'Valid userId is required' });
+  }
+  if (addressId !== undefined && addressId !== null && !isUuid(String(addressId))) {
+    return res.status(400).json({ error: 'Invalid addressId' });
   }
 
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
+
+    let selectedAddress = null;
+    if (addressId) {
+      const [addressRows] = await connection.query(
+        `SELECT id, label, recipient_name, phone, address_line1, address_line2, city, state, country, postal_code, notes
+         FROM user_addresses
+         WHERE id = ? AND user_id = ?
+         FOR UPDATE`,
+        [addressId, userId]
+      );
+      if (addressRows.length === 0) {
+        await connection.rollback();
+        return res.status(404).json({ error: 'Selected address not found' });
+      }
+      selectedAddress = addressRows[0];
+      if (saveAsDefault) {
+        await connection.query('UPDATE user_addresses SET is_default = 0, updated_at = NOW() WHERE user_id = ?', [userId]);
+        await connection.query('UPDATE user_addresses SET is_default = 1, updated_at = NOW() WHERE id = ?', [selectedAddress.id]);
+      }
+    } else {
+      const normalized = normalizeAddressInput(deliveryAddress);
+      const validationError = validateAddressInput(normalized);
+      if (validationError) {
+        await connection.rollback();
+        return res.status(400).json({ error: validationError });
+      }
+      selectedAddress = {
+        id: null,
+        label: normalized.label,
+        recipient_name: normalized.recipientName,
+        phone: normalized.phone,
+        address_line1: normalized.addressLine1,
+        address_line2: normalized.addressLine2,
+        city: normalized.city,
+        state: normalized.state,
+        country: normalized.country,
+        postal_code: normalized.postalCode,
+        notes: normalized.notes,
+      };
+      if (saveAddress) {
+        const [defaultRows] = await connection.query(
+          'SELECT id FROM user_addresses WHERE user_id = ? AND is_default = 1 FOR UPDATE',
+          [userId]
+        );
+        const shouldDefault = Boolean(saveAsDefault) || defaultRows.length === 0;
+        if (shouldDefault) {
+          await connection.query('UPDATE user_addresses SET is_default = 0, updated_at = NOW() WHERE user_id = ?', [userId]);
+        }
+        const newAddressId = uuidv4();
+        await connection.query(
+          `INSERT INTO user_addresses
+           (id, user_id, label, recipient_name, phone, address_line1, address_line2, city, state, country, postal_code, notes, is_default, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+          [
+            newAddressId,
+            userId,
+            selectedAddress.label,
+            selectedAddress.recipient_name,
+            selectedAddress.phone,
+            selectedAddress.address_line1,
+            selectedAddress.address_line2,
+            selectedAddress.city,
+            selectedAddress.state,
+            selectedAddress.country,
+            selectedAddress.postal_code,
+            selectedAddress.notes,
+            shouldDefault ? 1 : 0,
+          ]
+        );
+        selectedAddress.id = newAddressId;
+      }
+    }
 
     const [cartItems] = await connection.query(
       `SELECT 
@@ -214,9 +496,29 @@ exports.createOrder = async (req, res) => {
 
     const orderId = uuidv4();
     await connection.query(
-      `INSERT INTO orders (id, user_id, total_amount, discount_amount, payable_amount, coupon_id, coupon_code, coupon_discount_type, coupon_discount_value, status, created_at, updated_at)
-       VALUES (?, ?, ?, 0, ?, NULL, NULL, NULL, NULL, 'pending', NOW(), NOW())`,
-      [orderId, userId, total, total]
+      `INSERT INTO orders
+       (id, user_id, total_amount, discount_amount, payable_amount, coupon_id, coupon_code, coupon_discount_type, coupon_discount_value,
+        delivery_address_id, delivery_label, delivery_recipient_name, delivery_phone, delivery_address_line1, delivery_address_line2,
+        delivery_city, delivery_state, delivery_country, delivery_postal_code, delivery_notes,
+        status, created_at, updated_at)
+       VALUES (?, ?, ?, 0, ?, NULL, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW(), NOW())`,
+      [
+        orderId,
+        userId,
+        total,
+        total,
+        selectedAddress.id,
+        selectedAddress.label,
+        selectedAddress.recipient_name,
+        selectedAddress.phone,
+        selectedAddress.address_line1,
+        selectedAddress.address_line2,
+        selectedAddress.city,
+        selectedAddress.state,
+        selectedAddress.country,
+        selectedAddress.postal_code,
+        selectedAddress.notes,
+      ]
     );
 
     for (const item of cartItems) {
@@ -235,6 +537,19 @@ exports.createOrder = async (req, res) => {
       status: 'pending',
       total: total.toFixed(2),
       payableAmount: total.toFixed(2),
+      deliveryAddress: {
+        addressId: selectedAddress.id,
+        label: selectedAddress.label,
+        recipientName: selectedAddress.recipient_name,
+        phone: selectedAddress.phone,
+        addressLine1: selectedAddress.address_line1,
+        addressLine2: selectedAddress.address_line2,
+        city: selectedAddress.city,
+        state: selectedAddress.state,
+        country: selectedAddress.country,
+        postalCode: selectedAddress.postal_code,
+        notes: selectedAddress.notes,
+      },
     });
   } catch (err) {
     await connection.rollback();

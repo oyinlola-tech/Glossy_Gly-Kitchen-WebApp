@@ -15,6 +15,21 @@ export interface SavedCardDto {
   is_default?: number;
 }
 
+export interface UserAddressDto {
+  id: string;
+  label?: string;
+  recipient_name: string;
+  phone: string;
+  address_line1: string;
+  address_line2?: string;
+  city: string;
+  state: string;
+  country: string;
+  postal_code?: string;
+  notes?: string;
+  is_default?: number;
+}
+
 export interface DisputeDto {
   id: string;
   title: string;
@@ -403,10 +418,27 @@ class ApiService {
     });
   }
 
-  async createOrder(token: string) {
+  async createOrder(token: string, data?: {
+    addressId?: string;
+    deliveryAddress?: {
+      label?: string;
+      recipientName: string;
+      phone: string;
+      addressLine1: string;
+      addressLine2?: string;
+      city: string;
+      state: string;
+      country: string;
+      postalCode?: string;
+      notes?: string;
+    };
+    saveAddress?: boolean;
+    saveAsDefault?: boolean;
+  }) {
     const response: any = await this.request(API_CONFIG.ENDPOINTS.ORDERS, {
       method: 'POST',
       token,
+      body: JSON.stringify(data || {}),
     });
 
     return {
@@ -414,6 +446,37 @@ class ApiService {
       id: response?.id || response?.orderId,
       total: Number(response?.total ?? 0),
     };
+  }
+
+  async getUserAddresses(token: string): Promise<UserAddressDto[]> {
+    const response: any = await this.request(API_CONFIG.ENDPOINTS.ORDER_ADDRESSES, {
+      method: 'GET',
+      token,
+    });
+    return this.asArray<UserAddressDto>(response?.addresses || response);
+  }
+
+  async createUserAddress(token: string, data: any) {
+    return this.request(API_CONFIG.ENDPOINTS.ORDER_ADDRESSES, {
+      method: 'POST',
+      token,
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateUserAddress(token: string, addressId: string, data: any) {
+    return this.request(`${API_CONFIG.ENDPOINTS.ORDER_ADDRESSES}/${addressId}`, {
+      method: 'PUT',
+      token,
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteUserAddress(token: string, addressId: string) {
+    return this.request(`${API_CONFIG.ENDPOINTS.ORDER_ADDRESSES}/${addressId}`, {
+      method: 'DELETE',
+      token,
+    });
   }
 
   async getOrders(token: string) {
@@ -661,6 +724,17 @@ class ApiService {
       createdAt: order.createdAt || order.created_at,
       user: {
         email: order.user?.email || order.email,
+      },
+      delivery: {
+        recipientName: order.delivery_recipient_name,
+        phone: order.delivery_phone,
+        addressLine1: order.delivery_address_line1,
+        addressLine2: order.delivery_address_line2,
+        city: order.delivery_city,
+        state: order.delivery_state,
+        country: order.delivery_country,
+        postalCode: order.delivery_postal_code,
+        notes: order.delivery_notes,
       },
     }));
   }

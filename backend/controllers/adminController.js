@@ -879,7 +879,9 @@ exports.listOrders = async (req, res) => {
   try {
     const [countRows] = await db.query(`SELECT COUNT(*) AS total FROM orders o ${whereClause}`, values);
     const [rows] = await db.query(
-      `SELECT o.id, o.user_id, o.total_amount, o.status, o.created_at, o.updated_at, u.email
+      `SELECT o.id, o.user_id, o.total_amount, o.status, o.created_at, o.updated_at, u.email,
+              o.delivery_recipient_name, o.delivery_phone, o.delivery_address_line1, o.delivery_address_line2,
+              o.delivery_city, o.delivery_state, o.delivery_country, o.delivery_postal_code, o.delivery_notes
        FROM orders o
        JOIN users u ON u.id = o.user_id
        ${whereClause}

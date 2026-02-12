@@ -32,6 +32,7 @@ export const API_CONFIG = {
     CART: '/cart',
     // Orders
     ORDERS: '/orders',
+    ORDER_ADDRESSES: '/orders/addresses',
     // Payments
     PAYMENTS: {
       INITIALIZE: '/payments/initialize',
