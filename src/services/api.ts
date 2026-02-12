@@ -2,6 +2,7 @@ import { API_CONFIG } from '../config/api';
 
 interface RequestOptions extends RequestInit {
   token?: string;
+  skipAuthRetry?: boolean;
 }
 
 class ApiService {
@@ -12,7 +13,7 @@ class ApiService {
   }
 
   private async request<T = any>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-    const { token, ...fetchOptions } = options;
+    const { token, skipAuthRetry, ...fetchOptions } = options;
 
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -30,12 +31,83 @@ class ApiService {
 
     const payload = await response.json().catch(() => ({}));
 
+    if (
+      response.status === 401 &&
+      token &&
+      !skipAuthRetry &&
+      !endpoint.includes('/refresh') &&
+      !endpoint.includes('/logout')
+    ) {
+      const refreshed = await this.tryRefreshSession(endpoint.startsWith('/admin'));
+      if (refreshed?.token) {
+        return this.request<T>(endpoint, {
+          ...options,
+          token: refreshed.token,
+          skipAuthRetry: true,
+        });
+      }
+    }
+
     if (!response.ok) {
       const message = payload?.message || payload?.error || 'Request failed';
       throw new Error(message);
     }
 
     return payload;
+  }
+
+  private getTokenStorageKeys(isAdmin: boolean) {
+    return isAdmin
+      ? { token: 'adminToken', refreshToken: 'adminRefreshToken', user: 'admin' }
+      : { token: 'token', refreshToken: 'refreshToken', user: 'user' };
+  }
+
+  private getStoredValue(key: string) {
+    return sessionStorage.getItem(key) || localStorage.getItem(key);
+  }
+
+  private setStoredValue(key: string, value: string, persist = false) {
+    sessionStorage.setItem(key, value);
+    if (persist) {
+      localStorage.setItem(key, value);
+    }
+  }
+
+  private getIsPersistentSession(isAdmin: boolean) {
+    const markerKey = isAdmin ? 'adminSessionPersistent' : 'userSessionPersistent';
+    return localStorage.getItem(markerKey) === 'true';
+  }
+
+  private async tryRefreshSession(isAdmin: boolean): Promise<{ token: string; refreshToken: string } | null> {
+    const keys = this.getTokenStorageKeys(isAdmin);
+    const refreshToken = this.getStoredValue(keys.refreshToken);
+    if (!refreshToken) {
+      return null;
+    }
+
+    try {
+      const endpoint = isAdmin ? API_CONFIG.ENDPOINTS.ADMIN.AUTH.REFRESH : API_CONFIG.ENDPOINTS.AUTH.REFRESH;
+      const response: any = await this.request(endpoint, {
+        method: 'POST',
+        body: JSON.stringify({ refreshToken }),
+        skipAuthRetry: true,
+      });
+
+      const token = response?.token || response?.accessToken;
+      const nextRefreshToken = response?.refreshToken;
+      if (!token || !nextRefreshToken) {
+        return null;
+      }
+
+      const persist = this.getIsPersistentSession(isAdmin);
+      this.setStoredValue(keys.token, token, persist);
+      this.setStoredValue(keys.refreshToken, nextRefreshToken, persist);
+      window.dispatchEvent(new CustomEvent('auth:session-updated', { detail: { isAdmin } }));
+
+      return { token, refreshToken: nextRefreshToken };
+    } catch {
+      return null;
+    }
   }
 
   private asArray<T>(value: any): T[] {
@@ -84,6 +156,22 @@ class ApiService {
 
   async login(data: { email: string; password: string; deviceId?: string }) {
     const response = await this.request(API_CONFIG.ENDPOINTS.AUTH.LOGIN, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return this.mapUserAuth(response);
+  }
+
+  async loginWithGoogle(data: { idToken: string; deviceId?: string; referralCode?: string }) {
+    const response = await this.request(API_CONFIG.ENDPOINTS.AUTH.GOOGLE, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return this.mapUserAuth(response);
+  }
+
+  async loginWithApple(data: { identityToken: string; deviceId?: string; referralCode?: string }) {
+    const response = await this.request(API_CONFIG.ENDPOINTS.AUTH.APPLE, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -156,9 +244,95 @@ class ApiService {
     });
   }
 
+  async logoutAll(token: string) {
+    return this.request(API_CONFIG.ENDPOINTS.AUTH.LOGOUT_ALL, {
+      method: 'POST',
+      token,
+    });
+  }
+
+  async refreshAuth(refreshToken: string) {
+    const response = await this.request(API_CONFIG.ENDPOINTS.AUTH.REFRESH, {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+      skipAuthRetry: true,
+    });
+    return this.mapUserAuth(response);
+  }
+
+  async requestAccountDeletionOtp(token: string) {
+    return this.request(API_CONFIG.ENDPOINTS.AUTH.DELETE_ACCOUNT_REQUEST_OTP, {
+      method: 'POST',
+      token,
+    });
+  }
+
+  async deleteAccount(token: string, otp: string) {
+    return this.request(API_CONFIG.ENDPOINTS.AUTH.DELETE_ACCOUNT, {
+      method: 'DELETE',
+      token,
+      body: JSON.stringify({ otp }),
+    });
+  }
+
   async getFoods() {
     const response = await this.request(API_CONFIG.ENDPOINTS.FOODS, { method: 'GET' });
-    return this.asArray(response);
+    return this.asArray(response).map((food: any) => ({
+      ...food,
+      price: Number(food.price ?? 0),
+      categoryId: food.categoryId || food.category_id || null,
+      imageUrl: food.imageUrl || food.image_url || undefined,
+      currency: (food.currency || 'NGN').toUpperCase(),
+      available: food.available !== undefined ? Boolean(food.available) : true,
+    }));
+  }
+
+  async getAdminFoods(token: string) {
+    const response = await this.request(API_CONFIG.ENDPOINTS.ADMIN.FOODS_ALL, {
+      method: 'GET',
+      token,
+    });
+    return this.asArray(response).map((food: any) => ({
+      ...food,
+      price: Number(food.price ?? 0),
+      categoryId: food.categoryId || food.category_id || null,
+      imageUrl: food.imageUrl || food.image_url || undefined,
+      currency: (food.currency || 'NGN').toUpperCase(),
+      available: food.available !== undefined ? Boolean(food.available) : true,
+    }));
+  }
+
+  async getFoodCategories() {
+    const response = await this.request(API_CONFIG.ENDPOINTS.FOOD_CATEGORIES, {
+      method: 'GET',
+    });
+    return this.asArray(response).map((category: any) => ({
+      ...category,
+      foodCount: Number(category.foodCount ?? category.food_count ?? 0),
+    }));
+  }
+
+  async createFoodCategory(token: string, name: string) {
+    return this.request(API_CONFIG.ENDPOINTS.FOOD_CATEGORIES, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  async updateFoodCategory(token: string, id: string, name: string) {
+    return this.request(`${API_CONFIG.ENDPOINTS.FOOD_CATEGORIES}/${id}`, {
+      method: 'PUT',
+      token,
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  async deleteFoodCategory(token: string, id: string) {
+    return this.request(`${API_CONFIG.ENDPOINTS.FOOD_CATEGORIES}/${id}`, {
+      method: 'DELETE',
+      token,
+    });
   }
 
   async getFood(id: string) {
@@ -244,6 +418,8 @@ class ApiService {
     return {
       ...response,
       total: Number(response.total ?? response.total_amount ?? response.payable_amount ?? 0),
+      discountAmount: Number(response.discountAmount ?? response.discount_amount ?? 0),
+      payableAmount: Number(response.payableAmount ?? response.payable_amount ?? response.total_amount ?? 0),
       createdAt: response.createdAt || response.created_at,
     };
   }
@@ -253,6 +429,21 @@ class ApiService {
       method: 'POST',
       token,
       body: JSON.stringify({ couponCode }),
+    });
+  }
+
+  async validateCoupon(token: string, orderId: string, couponCode: string) {
+    return this.request(`${API_CONFIG.ENDPOINTS.ORDERS}/${orderId}/coupon/validate`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ couponCode }),
+    });
+  }
+
+  async removeCoupon(token: string, orderId: string) {
+    return this.request(`${API_CONFIG.ENDPOINTS.ORDERS}/${orderId}/coupon`, {
+      method: 'DELETE',
+      token,
     });
   }
 
@@ -292,6 +483,28 @@ class ApiService {
     return this.asArray(response?.cards || response);
   }
 
+  async saveCardFromReference(token: string, reference: string) {
+    return this.request(API_CONFIG.ENDPOINTS.PAYMENTS.CARDS, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ reference }),
+    });
+  }
+
+  async setDefaultSavedCard(token: string, cardId: string) {
+    return this.request(`${API_CONFIG.ENDPOINTS.PAYMENTS.CARD_SET_DEFAULT}/${cardId}/default`, {
+      method: 'PATCH',
+      token,
+    });
+  }
+
+  async deleteSavedCard(token: string, cardId: string) {
+    return this.request(`${API_CONFIG.ENDPOINTS.PAYMENTS.CARDS}/${cardId}`, {
+      method: 'DELETE',
+      token,
+    });
+  }
+
   async payWithSavedCard(token: string, data: { orderId: string; cardId: string }) {
     return this.request(API_CONFIG.ENDPOINTS.PAYMENTS.PAY_WITH_SAVED_CARD, {
       method: 'POST',
@@ -323,22 +536,49 @@ class ApiService {
     });
   }
 
-  async getAdminDashboard(token: string) {
-    const response: any = await this.request(API_CONFIG.ENDPOINTS.ADMIN.DASHBOARD, {
+  async adminLogoutAll(token: string) {
+    return this.request(API_CONFIG.ENDPOINTS.ADMIN.AUTH.LOGOUT_ALL, {
+      method: 'POST',
+      token,
+    });
+  }
+
+  async adminRefreshAuth(refreshToken: string) {
+    const response = await this.request(API_CONFIG.ENDPOINTS.ADMIN.AUTH.REFRESH, {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+      skipAuthRetry: true,
+    });
+    return this.mapAdminAuth(response);
+  }
+
+  async getAdminDashboard(token: string, period: 'weekly' | 'monthly' | 'yearly' = 'weekly') {
+    const response: any = await this.request(`${API_CONFIG.ENDPOINTS.ADMIN.DASHBOARD}?period=${period}`, {
       method: 'GET',
       token,
     });
 
     return {
-      totalRevenue: Number(response?.orders?.gross_order_value ?? 0),
+      totalRevenue: Number(response?.orders?.amount_made ?? response?.orders?.gross_order_value ?? 0),
       totalOrders: Number(response?.orders?.total_orders ?? 0),
       totalUsers: Number(response?.users?.total_users ?? 0),
       revenueGrowth: 0,
+      currency: response?.orders?.currency || 'NGN',
+      reports: response?.reports || { period, sales: [], topMeals: [] },
       raw: response,
     };
   }
 
-  async adminCreateFood(token: string, data: { name: string; price: number; description?: string; category?: string }) {
+  async adminCreateFood(token: string, data: {
+    name: string;
+    price: number;
+    description?: string;
+    categoryId?: string;
+    category?: string;
+    currency?: string;
+    imageDataUrl?: string;
+    imageFileName?: string;
+  }) {
     return this.request(API_CONFIG.ENDPOINTS.FOODS, {
       method: 'POST',
       token,
@@ -468,6 +708,14 @@ class ApiService {
     return this.asArray(response?.disputes || response);
   }
 
+  async createDispute(token: string, data: any) {
+    return this.request(API_CONFIG.ENDPOINTS.ADMIN.DISPUTES, {
+      method: 'POST',
+      token,
+      body: JSON.stringify(data),
+    });
+  }
+
   async getDispute(token: string, id: string) {
     return this.request(`${API_CONFIG.ENDPOINTS.ADMIN.DISPUTES}/${id}`, {
       method: 'GET',
@@ -485,6 +733,14 @@ class ApiService {
 
   async resolveDispute(token: string, id: string, data: any) {
     return this.request(`${API_CONFIG.ENDPOINTS.ADMIN.DISPUTES}/${id}/resolve`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify(data),
+    });
+  }
+
+  async addDisputeComment(token: string, id: string, data: { comment: string; isInternal?: boolean }) {
+    return this.request(`${API_CONFIG.ENDPOINTS.ADMIN.DISPUTES}/${id}/comments`, {
       method: 'POST',
       token,
       body: JSON.stringify(data),

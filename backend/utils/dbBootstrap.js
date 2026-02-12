@@ -37,8 +37,18 @@ const TABLE_DEFINITIONS = [
     name VARCHAR(255) NOT NULL,
     price DECIMAL(10,2) NOT NULL,
     description TEXT,
+    category_id VARCHAR(36),
     category VARCHAR(100),
+    image_url VARCHAR(255),
+    currency VARCHAR(10) DEFAULT 'NGN',
     available BOOLEAN DEFAULT TRUE,
+    created_at DATETIME,
+    updated_at DATETIME,
+    INDEX idx_food_items_category_id (category_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS meal_categories (
+    id VARCHAR(36) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
     created_at DATETIME,
     updated_at DATETIME
   )`,
@@ -422,6 +432,46 @@ const ensureDatabaseAndTables = async () => {
       columnName: 'coupon_discount_value',
       definition: 'coupon_discount_value DECIMAL(10,2)',
     });
+    await ensureColumnExists({
+      connection: adminConnection,
+      dbName,
+      tableName: 'food_items',
+      columnName: 'category_id',
+      definition: 'category_id VARCHAR(36)',
+    });
+    await ensureColumnExists({
+      connection: adminConnection,
+      dbName,
+      tableName: 'food_items',
+      columnName: 'image_url',
+      definition: 'image_url VARCHAR(255)',
+    });
+    await ensureColumnExists({
+      connection: adminConnection,
+      dbName,
+      tableName: 'food_items',
+      columnName: 'currency',
+      definition: "currency VARCHAR(10) DEFAULT 'NGN'",
+    });
+
+    await adminConnection.query(
+      `INSERT INTO meal_categories (id, name, created_at, updated_at)
+       SELECT UUID(), category, NOW(), NOW()
+       FROM food_items
+       WHERE category IS NOT NULL
+         AND TRIM(category) <> ''
+         AND category NOT IN (SELECT name FROM meal_categories)
+       GROUP BY category`
+    );
+
+    await adminConnection.query(
+      `UPDATE food_items fi
+       JOIN meal_categories mc ON mc.name = fi.category
+       SET fi.category_id = mc.id
+       WHERE fi.category_id IS NULL
+         AND fi.category IS NOT NULL
+         AND TRIM(fi.category) <> ''`
+    );
   } finally {
     try {
       await adminConnection.query('SELECT RELEASE_LOCK(?)', [bootstrapLockName]);

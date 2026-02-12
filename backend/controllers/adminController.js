@@ -1339,6 +1339,10 @@ exports.listAuditLogs = async (req, res) => {
 };
 
 exports.dashboard = async (req, res) => {
+  const period = ['weekly', 'monthly', 'yearly'].includes(String(req.query.period || '').toLowerCase())
+    ? String(req.query.period).toLowerCase()
+    : 'weekly';
+
   try {
     const [[usersRow]] = await db.query(
       `SELECT
@@ -1351,7 +1355,8 @@ exports.dashboard = async (req, res) => {
       `SELECT
          COUNT(*) AS total_orders,
          SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending_orders,
-         COALESCE(SUM(total_amount), 0) AS gross_order_value
+         COALESCE(SUM(total_amount), 0) AS gross_order_value,
+         COALESCE(SUM(CASE WHEN status = 'completed' THEN COALESCE(payable_amount, total_amount) ELSE 0 END), 0) AS amount_made
        FROM orders`
     );
     const [[disputesRow]] = await db.query(
@@ -1361,10 +1366,84 @@ exports.dashboard = async (req, res) => {
        FROM disputes`
     );
 
+    let salesSeries = [];
+    if (period === 'weekly') {
+      const [rows] = await db.query(
+        `SELECT DATE(created_at) AS bucket_date,
+                COUNT(*) AS orders_count,
+                COALESCE(SUM(CASE WHEN status = 'completed' THEN COALESCE(payable_amount, total_amount) ELSE 0 END), 0) AS amount
+         FROM orders
+         WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+         GROUP BY DATE(created_at)
+         ORDER BY bucket_date ASC`
+      );
+      salesSeries = rows.map((row) => ({
+        label: row.bucket_date,
+        orders: Number(row.orders_count),
+        amount: Number(row.amount),
+      }));
+    } else if (period === 'monthly') {
+      const [rows] = await db.query(
+        `SELECT DATE_FORMAT(created_at, '%Y-%m') AS bucket_month,
+                COUNT(*) AS orders_count,
+                COALESCE(SUM(CASE WHEN status = 'completed' THEN COALESCE(payable_amount, total_amount) ELSE 0 END), 0) AS amount
+         FROM orders
+         WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 11 MONTH)
+         GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+         ORDER BY bucket_month ASC`
+      );
+      salesSeries = rows.map((row) => ({
+        label: row.bucket_month,
+        orders: Number(row.orders_count),
+        amount: Number(row.amount),
+      }));
+    } else {
+      const [rows] = await db.query(
+        `SELECT YEAR(created_at) AS bucket_year,
+                COUNT(*) AS orders_count,
+                COALESCE(SUM(CASE WHEN status = 'completed' THEN COALESCE(payable_amount, total_amount) ELSE 0 END), 0) AS amount
+         FROM orders
+         WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 4 YEAR)
+         GROUP BY YEAR(created_at)
+         ORDER BY bucket_year ASC`
+      );
+      salesSeries = rows.map((row) => ({
+        label: String(row.bucket_year),
+        orders: Number(row.orders_count),
+        amount: Number(row.amount),
+      }));
+    }
+
+    const [topMealsRows] = await db.query(
+      `SELECT fi.id, fi.name, SUM(oi.quantity) AS quantity_sold,
+              COALESCE(SUM(oi.quantity * oi.price_at_order), 0) AS revenue
+       FROM order_items oi
+       JOIN orders o ON o.id = oi.order_id
+       JOIN food_items fi ON fi.id = oi.food_id
+       WHERE o.status = 'completed'
+       GROUP BY fi.id, fi.name
+       ORDER BY quantity_sold DESC, revenue DESC
+       LIMIT 5`
+    );
+
     return res.json({
       users: usersRow,
-      orders: ordersRow,
+      orders: {
+        ...ordersRow,
+        currency: 'NGN',
+      },
       disputes: disputesRow,
+      reports: {
+        period,
+        sales: salesSeries,
+        topMeals: topMealsRows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          quantitySold: Number(row.quantity_sold),
+          revenue: Number(row.revenue),
+          currency: 'NGN',
+        })),
+      },
       generatedAt: new Date().toISOString(),
     });
   } catch (err) {

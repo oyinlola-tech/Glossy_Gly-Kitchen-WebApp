@@ -12,7 +12,14 @@ interface Food {
   price: number;
   category: string;
   imageUrl?: string;
+  currency?: string;
 }
+
+const NGN_FORMATTER = new Intl.NumberFormat('en-NG', {
+  style: 'currency',
+  currency: 'NGN',
+  minimumFractionDigits: 2,
+});
 
 export const Menu: React.FC = () => {
   const { token } = useAuth();
@@ -62,24 +69,6 @@ export const Menu: React.FC = () => {
     const matchesCategory = selectedCategory === 'all' || food.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
-
-  // Placeholder images for food items
-  const placeholderImages = {
-    'burger': 'https://images.unsplash.com/photo-1606755456206-b25206cde27e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxidXJnZXIlMjBmcmllcyUyMGFwcGV0aXplcnxlbnwxfHx8fDE3NzA5NzYwNTV8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    'pasta': 'https://images.unsplash.com/photo-1609166639722-47053ca112ea?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwYXN0YSUyMGl0YWxpYW4lMjBjdWlzaW5lfGVufDF8fHx8MTc3MDg4MDA5NXww&ixlib=rb-4.1.0&q=80&w=1080',
-    'sushi': 'https://images.unsplash.com/photo-1700324822763-956100f79b0d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdXNoaSUyMGphcGFuZXNlJTIwZm9vZHxlbnwxfHx8fDE3NzA5MDMyNzB8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    'steak': 'https://images.unsplash.com/photo-1693422660544-014dd9f3ef73?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdGVhayUyMGdyaWxsZWQlMjBtZWF0fGVufDF8fHx8MTc3MDkzOTgxMnww&ixlib=rb-4.1.0&q=80&w=1080',
-    'salad': 'https://images.unsplash.com/photo-1677653805080-59c57727c84e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzYWxhZCUyMGZyZXNoJTIwdmVnZXRhYmxlc3xlbnwxfHx8fDE3NzA5NzYwNTZ8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    'default': 'https://images.unsplash.com/photo-1765009557798-da2bded84958?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZXN0YXVyYW50JTIwbWVudSUyMGZvb2QlMjB2YXJpZXR5fGVufDF8fHx8MTc3MDk3NjA1NHww&ixlib=rb-4.1.0&q=80&w=1080',
-  };
-
-  const getImageForFood = (food: Food) => {
-    if (food.imageUrl) return food.imageUrl;
-    const categoryKey = Object.keys(placeholderImages).find(key => 
-      food.name.toLowerCase().includes(key) || food.category?.toLowerCase().includes(key)
-    );
-    return placeholderImages[categoryKey as keyof typeof placeholderImages] || placeholderImages.default;
-  };
 
   if (isLoading) {
     return (
@@ -148,13 +137,13 @@ export const Menu: React.FC = () => {
             >
               <div className="relative h-56 overflow-hidden">
                 <ImageWithFallback
-                  src={getImageForFood(food)}
+                  src={food.imageUrl}
                   alt={food.name}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                 />
                 <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full">
                   <span className="text-amber-600 font-semibold">
-                    ${food.price.toFixed(2)}
+                    {NGN_FORMATTER.format(food.price)}
                   </span>
                 </div>
               </div>

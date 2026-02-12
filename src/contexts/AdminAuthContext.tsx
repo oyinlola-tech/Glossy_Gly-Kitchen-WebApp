@@ -27,39 +27,72 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const readStorageValue = (key: string) => sessionStorage.getItem(key) || localStorage.getItem(key);
+  const clearStorageValue = (key: string) => {
+    sessionStorage.removeItem(key);
+    localStorage.removeItem(key);
+  };
+
   useEffect(() => {
-    // Load auth data from localStorage
-    const storedToken = localStorage.getItem('adminToken');
-    const storedRefreshToken = localStorage.getItem('adminRefreshToken');
-    const storedAdmin = localStorage.getItem('admin');
+    const storedToken = readStorageValue('adminToken');
+    const storedRefreshToken = readStorageValue('adminRefreshToken');
+    const storedAdmin = readStorageValue('admin');
 
     if (storedToken && storedAdmin) {
       setToken(storedToken);
       setRefreshToken(storedRefreshToken);
       setAdmin(JSON.parse(storedAdmin));
       
-      // Verify token is still valid
-      apiService.getAdminMe(storedToken).catch(() => {
-        // Token invalid, clear auth
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminRefreshToken');
-        localStorage.removeItem('admin');
+      apiService.getAdminMe(storedToken).catch(async () => {
+        if (storedRefreshToken) {
+          try {
+            const refreshed = await apiService.adminRefreshAuth(storedRefreshToken);
+            if (refreshed?.token && refreshed?.refreshToken) {
+              const me = await apiService.getAdminMe(refreshed.token);
+              setAuthData({
+                admin: me?.admin || me,
+                token: refreshed.token,
+                refreshToken: refreshed.refreshToken,
+              });
+              return;
+            }
+          } catch {
+            // fallback to clear below
+          }
+        }
+        clearStorageValue('adminToken');
+        clearStorageValue('adminRefreshToken');
+        clearStorageValue('admin');
         setToken(null);
         setRefreshToken(null);
         setAdmin(null);
       });
     }
+
+    const syncSessionState = () => {
+      const nextToken = readStorageValue('adminToken');
+      const nextRefresh = readStorageValue('adminRefreshToken');
+      const nextAdmin = readStorageValue('admin');
+      setToken(nextToken);
+      setRefreshToken(nextRefresh);
+      setAdmin(nextAdmin ? JSON.parse(nextAdmin) : null);
+    };
+    window.addEventListener('auth:session-updated', syncSessionState);
     
     setIsLoading(false);
+    return () => window.removeEventListener('auth:session-updated', syncSessionState);
   }, []);
 
   const setAuthData = (data: { admin: Admin; token: string; refreshToken: string }) => {
     setAdmin(data.admin);
     setToken(data.token);
     setRefreshToken(data.refreshToken);
-    localStorage.setItem('adminToken', data.token);
-    localStorage.setItem('adminRefreshToken', data.refreshToken);
-    localStorage.setItem('admin', JSON.stringify(data.admin));
+    clearStorageValue('adminToken');
+    clearStorageValue('adminRefreshToken');
+    clearStorageValue('admin');
+    sessionStorage.setItem('adminToken', data.token);
+    sessionStorage.setItem('adminRefreshToken', data.refreshToken);
+    sessionStorage.setItem('admin', JSON.stringify(data.admin));
   };
 
   const login = async (email: string, password: string, otp?: string) => {
@@ -86,9 +119,9 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setAdmin(null);
     setToken(null);
     setRefreshToken(null);
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminRefreshToken');
-    localStorage.removeItem('admin');
+    clearStorageValue('adminToken');
+    clearStorageValue('adminRefreshToken');
+    clearStorageValue('admin');
   };
 
   return (

@@ -14,13 +14,14 @@ export const VerifyOtp: React.FC = () => {
   const [isResending, setIsResending] = useState(false);
 
   const handleChange = (index: number, value: string) => {
-    if (value.length > 1) return;
+    const numeric = value.replace(/\D/g, '');
+    if (numeric.length > 1) return;
 
     const newOtp = [...otp];
-    newOtp[index] = value;
+    newOtp[index] = numeric;
     setOtp(newOtp);
 
-    if (value && index < 5) {
+    if (numeric && index < 5) {
       const nextInput = document.getElementById(`otp-${index + 1}`);
       nextInput?.focus();
     }

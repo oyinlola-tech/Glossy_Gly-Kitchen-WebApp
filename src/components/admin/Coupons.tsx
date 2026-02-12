@@ -26,10 +26,15 @@ export const Coupons: React.FC = () => {
     expiresAt: '',
     maxUses: '',
   });
+  const ngnFormatter = new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+    minimumFractionDigits: 2,
+  });
 
   useEffect(() => {
     loadCoupons();
-  }, []);
+  }, [token]);
 
   const loadCoupons = async () => {
     if (!token) return;
@@ -106,7 +111,9 @@ export const Coupons: React.FC = () => {
             <div className="mb-4">
               <h3 className="text-2xl font-bold font-mono mb-2">{coupon.code}</h3>
               <p className="text-slate-600">
-                {coupon.discountType === 'percentage' ? `${coupon.discountValue}% off` : `$${coupon.discountValue} off`}
+                {coupon.discountType === 'percentage'
+                  ? `${coupon.discountValue}% off`
+                  : `${ngnFormatter.format(coupon.discountValue)} off`}
               </p>
             </div>
 
@@ -157,7 +164,7 @@ export const Coupons: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Discount Value * {formData.discountType === 'percentage' ? '(%)' : '($)'}
+                  Discount Value * {formData.discountType === 'percentage' ? '(%)' : '(NGN)'}
                 </label>
                 <input
                   type="number"

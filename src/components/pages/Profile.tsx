@@ -5,7 +5,7 @@ import { User, Phone, Lock, Mail, Gift } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const Profile: React.FC = () => {
-  const { user, token } = useAuth();
+  const { user, token, logout } = useAuth();
   const [referralCode, setReferralCode] = useState<string | undefined>(user?.referralCode);
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [phone, setPhone] = useState(user?.phone || '');
@@ -17,6 +17,9 @@ export const Profile: React.FC = () => {
     confirmPassword: '',
   });
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [deleteOtp, setDeleteOtp] = useState('');
+  const [requestingDeleteOtp, setRequestingDeleteOtp] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const handleUpdatePhone = async () => {
     if (!token) return;
@@ -143,7 +146,7 @@ export const Profile: React.FC = () => {
                 </div>
               ) : (
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                  <span className="text-gray-900">{user?.phone || 'Not set'}</span>
+                  <span className="text-gray-900">{phone || 'Not set'}</span>
                   <button
                     onClick={() => setIsEditingPhone(true)}
                     className="text-amber-600 hover:text-amber-700 font-medium text-sm"
@@ -234,6 +237,25 @@ export const Profile: React.FC = () => {
               </div>
             </form>
           )}
+
+          <div className="mt-5 border-t pt-5 space-y-2">
+            <button
+              type="button"
+              onClick={async () => {
+                if (!token) return;
+                try {
+                  await apiService.logoutAll(token);
+                  await logout();
+                  toast.success('Logged out of all sessions');
+                } catch (error: any) {
+                  toast.error(error.message || 'Failed to logout all sessions');
+                }
+              }}
+              className="w-full bg-slate-100 text-slate-800 py-2 rounded-xl hover:bg-slate-200 transition-all"
+            >
+              Logout All Sessions
+            </button>
+          </div>
         </div>
 
         {/* Referral Program */}
@@ -273,6 +295,67 @@ export const Profile: React.FC = () => {
                 Generate Referral Code
               </button>
             )}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 shadow-lg md:col-span-2 border border-rose-100">
+          <h2 className="text-xl font-semibold mb-2 text-rose-700">Danger Zone</h2>
+          <p className="text-gray-600 mb-4 text-sm">
+            Deleting your account is permanent and cannot be undone.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <button
+              type="button"
+              onClick={async () => {
+                if (!token) return;
+                setRequestingDeleteOtp(true);
+                try {
+                  await apiService.requestAccountDeletionOtp(token);
+                  toast.success('Deletion OTP sent to your email');
+                } catch (error: any) {
+                  toast.error(error.message || 'Failed to send deletion OTP');
+                } finally {
+                  setRequestingDeleteOtp(false);
+                }
+              }}
+              disabled={requestingDeleteOtp}
+              className="bg-rose-100 text-rose-700 py-2 px-3 rounded-xl hover:bg-rose-200 disabled:opacity-50"
+            >
+              {requestingDeleteOtp ? 'Sending OTP...' : 'Request Deletion OTP'}
+            </button>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              value={deleteOtp}
+              onChange={(e) => setDeleteOtp(e.target.value.replace(/\D/g, ''))}
+              placeholder="Enter 6-digit OTP"
+              className="border-2 border-rose-200 rounded-xl px-3 py-2 focus:outline-none focus:border-rose-500"
+            />
+            <button
+              type="button"
+              onClick={async () => {
+                if (!token || deleteOtp.length !== 6) {
+                  toast.error('Enter the 6-digit OTP');
+                  return;
+                }
+                if (!confirm('Delete your account permanently?')) return;
+                setDeletingAccount(true);
+                try {
+                  await apiService.deleteAccount(token, deleteOtp);
+                  await logout();
+                  toast.success('Account deleted');
+                } catch (error: any) {
+                  toast.error(error.message || 'Failed to delete account');
+                } finally {
+                  setDeletingAccount(false);
+                }
+              }}
+              disabled={deletingAccount}
+              className="bg-rose-600 text-white py-2 px-3 rounded-xl hover:bg-rose-700 disabled:opacity-50"
+            >
+              {deletingAccount ? 'Deleting...' : 'Delete Account'}
+            </button>
           </div>
         </div>
       </div>

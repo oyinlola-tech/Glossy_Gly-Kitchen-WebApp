@@ -20,10 +20,15 @@ export const AdminOrders: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const ngnFormatter = new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+    minimumFractionDigits: 2,
+  });
 
   useEffect(() => {
     loadOrders();
-  }, []);
+  }, [token]);
 
   const loadOrders = async () => {
     if (!token) return;
@@ -135,7 +140,7 @@ export const AdminOrders: React.FC = () => {
                 <tr key={order.id} className="hover:bg-slate-50">
                   <td className="px-6 py-4 font-mono text-sm">#{order.id.slice(0, 8)}</td>
                   <td className="px-6 py-4">{order.user?.email || 'N/A'}</td>
-                  <td className="px-6 py-4 font-semibold">${order.total?.toFixed(2) || '0.00'}</td>
+                  <td className="px-6 py-4 font-semibold">{ngnFormatter.format(order.total || 0)}</td>
                   <td className="px-6 py-4">
                     <select
                       value={order.status}

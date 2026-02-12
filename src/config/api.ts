@@ -27,6 +27,7 @@ export const API_CONFIG = {
     },
     // Foods
     FOODS: '/foods',
+    FOOD_CATEGORIES: '/foods/categories',
     // Cart
     CART: '/cart',
     // Orders
@@ -36,6 +37,7 @@ export const API_CONFIG = {
       INITIALIZE: '/payments/initialize',
       VERIFY: '/payments/verify',
       CARDS: '/payments/cards',
+      CARD_SET_DEFAULT: '/payments/cards',
       PAY_WITH_SAVED_CARD: '/payments/pay-with-saved-card',
     },
     // Admin
@@ -48,6 +50,7 @@ export const API_CONFIG = {
       },
       ME: '/admin/me',
       DASHBOARD: '/admin/dashboard',
+      FOODS_ALL: '/foods/admin/all',
       ADMINS: '/admin/admins',
       USERS: '/admin/users',
       ORDERS: '/admin/orders',

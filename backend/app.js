@@ -1,5 +1,6 @@
 const express = require('express');
 require('dotenv').config();
+const path = require('path');
 const db = require('./config/db'); // initialize connection
 const swaggerUi = require('swagger-ui-express');
 const { swaggerSpec } = require('./docs/swagger');
@@ -8,6 +9,7 @@ const { requestId, requestLogger } = require('./utils/requestLogger');
 const { validateConfig } = require('./utils/config');
 const { ensureSeedAdmin } = require('./utils/adminSeed');
 const { ensureDatabaseAndTables } = require('./utils/dbBootstrap');
+const { ensureUploadsDir } = require('./utils/uploads');
 
 const app = express();
 
@@ -17,12 +19,12 @@ if (process.env.TRUST_PROXY === 'true') {
   app.set('trust proxy', 1);
 }
 app.use(express.json({
-  limit: '100kb',
+  limit: '8mb',
   verify: (req, res, buf) => {
     req.rawBody = buf.toString('utf8');
   },
 }));
-app.use(express.urlencoded({ extended: true, limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '8mb' }));
 app.use(securityHeaders);
 app.use(cors());
 app.use(requireJson);
@@ -42,6 +44,7 @@ app.use('/cart', require('./routes/cartRoutes'));
 app.use('/orders', require('./routes/orderRoutes'));
 app.use('/admin', require('./routes/adminRoutes'));
 app.use('/payments', require('./routes/paymentRoutes'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Swagger docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
@@ -84,6 +87,7 @@ validateConfig();
 let server;
 const startServer = async () => {
   await ensureDatabaseAndTables();
+  await ensureUploadsDir();
   const connection = await db.getConnection();
   connection.release();
   console.log('Database ready');

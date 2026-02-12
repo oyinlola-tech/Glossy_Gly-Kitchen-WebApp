@@ -22,10 +22,15 @@ export const Cart: React.FC = () => {
   const [cart, setCart] = useState<{ items: CartItem[] } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [updatingItem, setUpdatingItem] = useState<string | null>(null);
+  const ngnFormatter = new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+    minimumFractionDigits: 2,
+  });
 
   useEffect(() => {
     loadCart();
-  }, []);
+  }, [token]);
 
   const loadCart = async () => {
     if (!token) {
@@ -166,7 +171,7 @@ export const Cart: React.FC = () => {
               {item.food.description && (
                 <p className="text-gray-600 text-sm mb-2">{item.food.description}</p>
               )}
-              <p className="text-amber-600 font-semibold">${item.food.price.toFixed(2)}</p>
+              <p className="text-amber-600 font-semibold">{ngnFormatter.format(item.food.price)}</p>
             </div>
 
             <div className="flex items-center gap-4">
@@ -205,15 +210,15 @@ export const Cart: React.FC = () => {
         <div className="space-y-3 mb-6">
           <div className="flex justify-between text-gray-600">
             <span>Subtotal</span>
-            <span>${calculateTotal().toFixed(2)}</span>
+            <span>{ngnFormatter.format(calculateTotal())}</span>
           </div>
           <div className="flex justify-between text-gray-600">
             <span>Tax (estimated)</span>
-            <span>${(calculateTotal() * 0.1).toFixed(2)}</span>
+            <span>{ngnFormatter.format(calculateTotal() * 0.1)}</span>
           </div>
           <div className="border-t pt-3 flex justify-between text-xl font-semibold">
             <span>Total</span>
-            <span className="text-amber-600">${(calculateTotal() * 1.1).toFixed(2)}</span>
+            <span className="text-amber-600">{ngnFormatter.format(calculateTotal() * 1.1)}</span>
           </div>
         </div>
 

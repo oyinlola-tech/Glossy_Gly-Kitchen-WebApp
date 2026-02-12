@@ -18,10 +18,16 @@ export const Orders: React.FC = () => {
   const { token } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+  const ngnFormatter = new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+    minimumFractionDigits: 2,
+  });
 
   useEffect(() => {
     loadOrders();
-  }, []);
+  }, [token]);
 
   const loadOrders = async () => {
     if (!token) {
@@ -70,6 +76,21 @@ export const Orders: React.FC = () => {
         return 'bg-rose-100 text-rose-700';
       default:
         return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!token) return;
+    if (!confirm('Cancel this pending order?')) return;
+    setCancellingOrderId(orderId);
+    try {
+      await apiService.cancelOrder(token, orderId);
+      toast.success('Order cancelled');
+      await loadOrders();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to cancel order');
+    } finally {
+      setCancellingOrderId(null);
     }
   };
 
@@ -149,7 +170,7 @@ export const Orders: React.FC = () => {
               <div>
                 <p className="text-gray-600 text-sm mb-1">Total Amount</p>
                 <p className="text-2xl font-semibold text-amber-600">
-                  ${order.total?.toFixed(2) || '0.00'}
+                  {ngnFormatter.format(order.total || 0)}
                 </p>
               </div>
 
@@ -160,6 +181,15 @@ export const Orders: React.FC = () => {
                 <Eye className="w-4 h-4" />
                 View Details
               </button>
+              {order.status.toLowerCase() === 'pending' && (
+                <button
+                  onClick={() => handleCancelOrder(order.id)}
+                  disabled={cancellingOrderId === order.id}
+                  className="ml-3 px-4 py-3 border border-rose-200 text-rose-600 rounded-xl hover:bg-rose-50 disabled:opacity-50"
+                >
+                  {cancellingOrderId === order.id ? 'Cancelling...' : 'Cancel'}
+                </button>
+              )}
             </div>
           </div>
         ))}

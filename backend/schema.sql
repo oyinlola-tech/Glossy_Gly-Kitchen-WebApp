@@ -42,8 +42,19 @@ CREATE TABLE food_items (
     name VARCHAR(255) NOT NULL,
     price DECIMAL(10,2) NOT NULL,
     description TEXT,
+    category_id VARCHAR(36),
     category VARCHAR(100),
+    image_url VARCHAR(255),
+    currency VARCHAR(10) DEFAULT 'NGN',
     available BOOLEAN DEFAULT TRUE,
+    created_at DATETIME,
+    updated_at DATETIME,
+    INDEX idx_food_items_category_id (category_id)
+);
+
+CREATE TABLE meal_categories (
+    id VARCHAR(36) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
     created_at DATETIME,
     updated_at DATETIME
 );
@@ -344,18 +355,4 @@ CREATE TABLE dispute_comments (
     FOREIGN KEY (dispute_id) REFERENCES disputes(id) ON DELETE CASCADE
 );
 
--- Sample data (optional)
-INSERT INTO food_items (id, name, price, description, category, available, created_at, updated_at)
-VALUES 
-    (UUID(), 'Jollof Rice', 12.99, 'Classic Nigerian jollof rice with fried plantains', 'Main', true, NOW(), NOW()),
-    (UUID(), 'Egusi Soup', 15.99, 'Ground melon soup with assorted meat', 'Soup', true, NOW(), NOW()),
-    (UUID(), 'Pounded Yam', 8.99, 'Smooth pounded yam', 'Swallow', true, NOW(), NOW()),
-    (UUID(), 'Chicken Suya', 10.99, 'Spicy grilled chicken skewers', 'Grill', true, NOW(), NOW()),
-    (UUID(), 'Fried Rice Combo', 13.99, 'Nigerian fried rice served with chicken and coleslaw', 'Main', true, NOW(), NOW()),
-    (UUID(), 'Pepper Soup', 11.49, 'Hot and spicy assorted meat pepper soup', 'Soup', true, NOW(), NOW()),
-    (UUID(), 'Moi Moi', 4.99, 'Steamed bean pudding rich in flavor', 'Sides', true, NOW(), NOW()),
-    (UUID(), 'Plantain & Gizzard', 9.49, 'Fried ripe plantain tossed with spicy gizzard', 'Sides', true, NOW(), NOW()),
-    (UUID(), 'Asun Bowl', 12.49, 'Peppered goat meat served with onions and peppers', 'Grill', true, NOW(), NOW()),
-    (UUID(), 'Ofada Rice & Sauce', 14.29, 'Ofada rice paired with signature ayamase sauce', 'Main', true, NOW(), NOW()),
-    (UUID(), 'Puff Puff (6pcs)', 3.99, 'Freshly fried sweet puff puff balls', 'Dessert', true, NOW(), NOW()),
-    (UUID(), 'Zobo Drink', 2.99, 'Chilled hibiscus drink with citrus notes', 'Beverage', true, NOW(), NOW());
+-- Optional starter categories can be inserted here by admin workflows if needed.

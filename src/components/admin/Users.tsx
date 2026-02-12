@@ -20,7 +20,7 @@ export const Users: React.FC = () => {
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [token]);
 
   const loadUsers = async () => {
     if (!token) return;
