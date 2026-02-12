@@ -1,5 +1,10 @@
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const configuredApiUrl = import.meta.env.VITE_API_URL;
+const API_BASE_URL = configuredApiUrl || (import.meta.env.PROD ? '' : 'http://localhost:3000');
+
+if (import.meta.env.PROD && !API_BASE_URL) {
+  throw new Error('Missing VITE_API_URL for production build/runtime');
+}
 
 export const API_CONFIG = {
   BASE_URL: API_BASE_URL,

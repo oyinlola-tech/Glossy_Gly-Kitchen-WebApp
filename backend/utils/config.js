@@ -30,6 +30,22 @@ const requireMinLengthEnv = (key, minLength) => {
   return value;
 };
 
+const requireBooleanEnv = (key) => {
+  const value = requireEnv(key);
+  if (!['true', 'false'].includes(value)) {
+    throw new Error(`Invalid boolean environment variable: ${key}. Use "true" or "false"`);
+  }
+  return value === 'true';
+};
+
+const requireNumberInRangeEnv = (key, min, max) => {
+  const value = requirePositiveNumberEnv(key);
+  if (value < min || value > max) {
+    throw new Error(`Invalid ${key}. Expected value between ${min} and ${max}`);
+  }
+  return value;
+};
+
 const rejectValuesInProduction = (key, blockedValues) => {
   if (process.env.NODE_ENV !== 'production') return;
   const value = requireEnv(key);
@@ -58,10 +74,15 @@ const validateConfig = () => {
   requirePositiveNumberEnv('ADMIN_REFRESH_TOKEN_EXPIRES_DAYS');
   requirePositiveNumberEnv('PASSWORD_MIN_LENGTH');
   requirePositiveNumberEnv('BCRYPT_ROUNDS');
+  requireNumberInRangeEnv('BCRYPT_ROUNDS', 10, 16);
   requirePositiveNumberEnv('RATE_LIMIT_MAX');
+  requireNumberInRangeEnv('RATE_LIMIT_MAX', 20, 2000);
   requirePositiveNumberEnv('AUTH_RATE_LIMIT_MAX');
+  requireNumberInRangeEnv('AUTH_RATE_LIMIT_MAX', 3, 200);
   requirePositiveNumberEnv('ADMIN_AUTH_RATE_LIMIT_MAX');
+  requireNumberInRangeEnv('ADMIN_AUTH_RATE_LIMIT_MAX', 3, 200);
   requireEnv('TRUST_PROXY');
+  requireBooleanEnv('TRUST_PROXY');
   requireEnv('LOG_FILE');
   requireEnv('SWAGGER_SERVER_URL');
   requireEnv('DEFAULT_ADMIN_EMAIL');
@@ -78,6 +99,9 @@ const validateConfig = () => {
     rejectValuesInProduction('JWT_SECRET', ['change_me']);
     rejectValuesInProduction('ADMIN_BOOTSTRAP_KEY', ['change_me_bootstrap']);
     rejectValuesInProduction('DEFAULT_ADMIN_PASSWORD', ['ChangeThisStrongAdminPassword123!']);
+    if (!String(process.env.PAYSTACK_BASE_URL).startsWith('https://')) {
+      throw new Error('PAYSTACK_BASE_URL must use https in production');
+    }
   }
 };
 

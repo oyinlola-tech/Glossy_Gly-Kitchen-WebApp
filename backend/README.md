@@ -20,7 +20,7 @@ Express + MySQL API for authentication, menu, cart, orders, payments, and admin 
 ```bash
 npm install
 ```
-2. Configure environment variables in `.env` (see `.env.example` if available).
+2. Configure environment variables in `.env` (copy from `.env.example`).
 3. Run in development:
 ```bash
 npm run dev
@@ -29,6 +29,14 @@ npm run dev
 ```bash
 npm start
 ```
+
+## Production Checklist
+- Set `NODE_ENV=production`.
+- Set strong `JWT_SECRET` and `ADMIN_BOOTSTRAP_KEY` values.
+- Set `CORS_ORIGIN` to your frontend origin(s).
+- Use `TRUST_PROXY=true` when behind a reverse proxy (Nginx, ALB, Cloudflare).
+- Ensure `LOG_FILE` path is writable and covered by log rotation.
+- Ensure Paystack base URL and webhook secret are production values.
 
 ## Runtime Endpoints
 - Health: `GET /health`

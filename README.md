@@ -51,6 +51,29 @@ This starts:
 - Frontend (Vite) at your configured dev port
 - Backend (nodemon) from `backend/`
 
+## Production Readiness Baseline
+
+1. Environment and secrets
+- Use `.env.example` and `backend/.env.example` as templates only.
+- Set strong values for `JWT_SECRET`, `ADMIN_BOOTSTRAP_KEY`, and admin credentials.
+- Set `NODE_ENV=production` and explicit `CORS_ORIGIN`.
+
+2. Build and run
+```bash
+npm run build
+npm run start:backend
+npm start
+```
+
+3. Operational checks
+- Verify `GET /health` and `GET /ready` return success.
+- Ensure HTTPS is terminated at your reverse proxy/load balancer.
+- Confirm log write path from `LOG_FILE` is mounted and rotated.
+
+4. Git hygiene
+- `.env` files and runtime uploads are ignored by git.
+- Rotate any previously committed secrets before deployment.
+
 ## Useful Commands
 - `npm run dev` - Run frontend + backend together
 - `npm run dev:frontend` - Run only frontend

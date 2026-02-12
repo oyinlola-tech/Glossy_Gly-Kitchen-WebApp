@@ -55,10 +55,12 @@
             "vite": "^6.4.1"
       },
       "scripts": {
-            "start": "vite",
+            "start": "vite preview --host 0.0.0.0 --port 4173",
             "dev": "node scripts/dev.js",
             "dev:frontend": "vite",
             "dev:backend": "npm run dev --prefix backend",
-            "build": "vite build"
+            "build": "vite build",
+            "build:all": "npm run build",
+            "start:backend": "npm start --prefix backend"
       }
 }
