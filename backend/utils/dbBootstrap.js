@@ -1,4 +1,6 @@
 const mysql = require('mysql2/promise');
+const { v4: uuidv4 } = require('uuid');
+const { hashPassword, validatePassword } = require('./password');
 
 const isSafeIdentifier = (value) => typeof value === 'string' && /^[A-Za-z0-9_]+$/.test(value);
 
@@ -582,6 +584,36 @@ const ensureDatabaseAndTables = async () => {
          AND fi.category IS NOT NULL
          AND TRIM(fi.category) <> ''`
     );
+
+    const seedAdminEmail = String(process.env.DEFAULT_ADMIN_EMAIL || '').trim().toLowerCase();
+    const seedAdminName = String(process.env.DEFAULT_ADMIN_FULL_NAME || '').trim();
+    const seedAdminPassword = String(process.env.DEFAULT_ADMIN_PASSWORD || '');
+
+    if (seedAdminEmail && seedAdminName && seedAdminPassword) {
+      const passwordError = validatePassword(seedAdminPassword);
+      if (passwordError) {
+        throw new Error(`DEFAULT_ADMIN_PASSWORD is invalid: ${passwordError}`);
+      }
+
+      const [adminCountRows] = await adminConnection.query(
+        'SELECT COUNT(*) AS total_admins FROM admin_users'
+      );
+      const totalAdmins = Number(adminCountRows?.[0]?.total_admins || 0);
+
+      if (totalAdmins === 0) {
+        const passwordHash = await hashPassword(seedAdminPassword);
+        await adminConnection.query(
+          `INSERT INTO admin_users (id, email, full_name, password_hash, role, is_active, created_at, updated_at)
+           VALUES (?, ?, ?, ?, 'super_admin', 1, NOW(), NOW())`,
+          [uuidv4(), seedAdminEmail, seedAdminName, passwordHash]
+        );
+        console.log(`Bootstrap admin created for ${seedAdminEmail}`);
+      } else {
+        console.log('Bootstrap admin already exists. Skipping admin seed.');
+      }
+    } else {
+      console.warn('Admin bootstrap env values are incomplete. Skipping bootstrap admin creation.');
+    }
   } finally {
     try {
       await adminConnection.query('SELECT RELEASE_LOCK(?)', [bootstrapLockName]);

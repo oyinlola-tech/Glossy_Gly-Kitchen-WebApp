@@ -46,6 +46,11 @@ const requireNumberInRangeEnv = (key, min, max) => {
   return value;
 };
 
+const validateOptionalNumberInRangeEnv = (key, min, max) => {
+  if (process.env[key] === undefined || String(process.env[key]).trim() === '') return null;
+  return requireNumberInRangeEnv(key, min, max);
+};
+
 const rejectValuesInProduction = (key, blockedValues) => {
   if (process.env.NODE_ENV !== 'production') return;
   const value = requireEnv(key);
@@ -79,8 +84,14 @@ const validateConfig = () => {
   requireNumberInRangeEnv('RATE_LIMIT_MAX', 20, 2000);
   requirePositiveNumberEnv('AUTH_RATE_LIMIT_MAX');
   requireNumberInRangeEnv('AUTH_RATE_LIMIT_MAX', 3, 200);
+  requirePositiveNumberEnv('OTP_IDENTITY_RATE_LIMIT_MAX');
+  requireNumberInRangeEnv('OTP_IDENTITY_RATE_LIMIT_MAX', 3, 200);
   requirePositiveNumberEnv('ADMIN_AUTH_RATE_LIMIT_MAX');
   requireNumberInRangeEnv('ADMIN_AUTH_RATE_LIMIT_MAX', 3, 200);
+  validateOptionalNumberInRangeEnv('AUTH_PROFILE_RATE_LIMIT_MAX', 20, 2000);
+  validateOptionalNumberInRangeEnv('FOOD_PUBLIC_RATE_LIMIT_MAX', 20, 5000);
+  validateOptionalNumberInRangeEnv('FOOD_ADMIN_RATE_LIMIT_MAX', 10, 2000);
+  validateOptionalNumberInRangeEnv('PAYMENT_WEBHOOK_RATE_LIMIT_MAX', 20, 5000);
   requireEnv('TRUST_PROXY');
   requireBooleanEnv('TRUST_PROXY');
   requireEnv('LOG_FILE');

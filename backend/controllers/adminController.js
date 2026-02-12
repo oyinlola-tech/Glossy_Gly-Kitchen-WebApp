@@ -168,8 +168,8 @@ exports.bootstrap = async (req, res) => {
     }
 
     const [countRows] = await db.query('SELECT COUNT(*) AS count FROM admin_users');
-    if (countRows[0].count > 0 && roleValue === 'super_admin') {
-      return res.status(403).json({ error: 'Super admin already initialized. Use admin APIs to create more admins.' });
+    if (countRows[0].count > 0) {
+      return res.status(403).json({ error: 'Admin bootstrap already initialized. Use authenticated admin APIs.' });
     }
 
     const adminId = uuidv4();
