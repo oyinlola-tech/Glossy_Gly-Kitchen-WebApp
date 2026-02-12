@@ -1,0 +1,31 @@
+{
+  "name": "glossy-gly-kitchen-backend",
+  "private": true,
+  "version": "1.2.0",
+  "description": "Node.js + Express backend API for Glossy-Gly-Kitchen (auth, menu, cart, orders, payments, and admin operations).",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "keywords": [],
+  "author": "Oluwayemi Oyinlola Michael",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "crypto": "^1.0.1",
+    "dotenv": "^17.2.4",
+    "express": "^5.2.1",
+    "google-auth-library": "^9.15.0",
+    "jwks-rsa": "^3.2.0",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.17.0",
+    "nodemailer": "^8.0.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}
