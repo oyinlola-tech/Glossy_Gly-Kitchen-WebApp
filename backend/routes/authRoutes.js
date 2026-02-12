@@ -24,6 +24,14 @@ const otpIdentityLimiter = rateLimit({
   },
 });
 
+const profileLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: Number(process.env.AUTH_PROFILE_RATE_LIMIT_MAX) > 0
+    ? Number(process.env.AUTH_PROFILE_RATE_LIMIT_MAX)
+    : 120,
+  keyGenerator: (req) => `auth-profile:${req.ip}`,
+});
+
 router.post('/signup', authLimiter, authController.signup);
 router.post('/verify', authLimiter, otpIdentityLimiter, authController.verify);
 router.post('/resend-otp', authLimiter, otpIdentityLimiter, authController.resendOtp); 
@@ -40,8 +48,8 @@ router.post('/logout', authLimiter, requireAuth, authController.logout);
 router.post('/logout-all', authLimiter, requireAuth, authController.logoutAll);
 router.post('/delete-account/request-otp', authLimiter, requireAuth, authController.requestAccountDeletionOtp);
 router.delete('/delete-account', authLimiter, requireAuth, otpIdentityLimiter, authController.deleteAccount);
-router.get('/me', requireAuth, authController.me);
-router.patch('/me', requireAuth, authController.updateMe);
-router.post('/referral-code/generate', requireAuth, authController.generateReferralCode);
+router.get('/me', profileLimiter, requireAuth, authController.me);
+router.patch('/me', profileLimiter, requireAuth, authController.updateMe);
+router.post('/referral-code/generate', profileLimiter, requireAuth, authController.generateReferralCode);
 
 module.exports = router;

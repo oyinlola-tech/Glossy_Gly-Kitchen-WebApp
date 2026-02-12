@@ -13,6 +13,21 @@ const { ensureUploadsDir } = require('./utils/uploads');
 
 const app = express();
 
+const safeErrorText = (err) => {
+  if (!err) return 'unknown error';
+  if (typeof err === 'string') return err.slice(0, 500);
+  if (err instanceof Error) {
+    const name = typeof err.name === 'string' ? err.name : 'Error';
+    const message = typeof err.message === 'string' ? err.message : 'Unknown error';
+    return `${name}: ${message}`.slice(0, 500);
+  }
+  return 'non-error rejection';
+};
+
+const logError = (prefix, err) => {
+  console.error(`${prefix}${safeErrorText(err)}`);
+};
+
 // Middleware
 app.disable('x-powered-by');
 if (process.env.TRUST_PROXY === 'true') {
@@ -75,7 +90,7 @@ app.use((req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
+  logError('Unhandled error: ', err);
   if (process.env.NODE_ENV === 'production') {
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -98,7 +113,7 @@ const startServer = async () => {
 };
 
 startServer().catch((err) => {
-  console.error('Failed to start server:', err.message);
+  logError('Failed to start server: ', err);
   process.exit(1);
 });
 
@@ -113,7 +128,7 @@ const shutdown = async (signal) => {
       await db.end();
       process.exit(0);
     } catch (err) {
-      console.error('Error during shutdown:', err.message);
+      logError('Error during shutdown: ', err);
       process.exit(1);
     }
   });
@@ -127,11 +142,11 @@ const shutdown = async (signal) => {
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('unhandledRejection', (reason) => {
-  console.error('Unhandled promise rejection:', reason);
+  logError('Unhandled promise rejection: ', reason);
   shutdown('UNHANDLED_REJECTION');
 });
 process.on('uncaughtException', (err) => {
-  console.error('Uncaught exception:', err);
+  logError('Uncaught exception: ', err);
   shutdown('UNCAUGHT_EXCEPTION');
 });
 

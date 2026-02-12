@@ -11,11 +11,22 @@ const adminAuthLimiter = rateLimit({
   keyGenerator: (req) => `admin-auth:${req.ip}`,
 });
 
+const adminApiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: Number(process.env.ADMIN_RATE_LIMIT_MAX) > 0
+    ? Number(process.env.ADMIN_RATE_LIMIT_MAX)
+    : 120,
+  keyGenerator: (req) => `admin-api:${req.ip}`,
+});
+
 router.post('/auth/bootstrap', adminAuthLimiter, adminController.bootstrap);
 router.post('/auth/login', adminAuthLimiter, adminController.login);
 router.post('/auth/refresh', adminAuthLimiter, adminController.refresh);
 router.post('/auth/logout', adminAuthLimiter, requireAdminAuth, adminController.logout);
 router.post('/auth/logout-all', adminAuthLimiter, requireAdminAuth, adminController.logoutAll);
+
+router.use(adminApiLimiter);
+
 router.get('/me', requireAdminAuth, adminController.me);
 
 router.get('/dashboard', requireAdminAuth, auditAdminAction('admin.dashboard.view'), adminController.dashboard);

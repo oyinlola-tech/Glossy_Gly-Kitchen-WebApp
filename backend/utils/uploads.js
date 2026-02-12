@@ -19,10 +19,42 @@ const ensureUploadsDir = async () => {
 const parseImageDataUrl = (value) => {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
-  const match = /^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=\r\n]+)$/.exec(trimmed);
-  if (!match) return null;
-  const mimeType = match[1].toLowerCase();
-  const base64Data = match[2].replace(/\s+/g, '');
+  if (!trimmed.startsWith('data:')) return null;
+
+  const marker = ';base64,';
+  const markerIndex = trimmed.indexOf(marker);
+  if (markerIndex <= 5) return null;
+
+  const mimeTypeRaw = trimmed.slice(5, markerIndex).toLowerCase();
+  if (!mimeTypeRaw.startsWith('image/')) return null;
+
+  for (let i = 0; i < mimeTypeRaw.length; i += 1) {
+    const ch = mimeTypeRaw[i];
+    const isLower = ch >= 'a' && ch <= 'z';
+    const isDigit = ch >= '0' && ch <= '9';
+    if (!(isLower || isDigit || ch === '/' || ch === '+' || ch === '.' || ch === '-')) {
+      return null;
+    }
+  }
+
+  const base64Raw = trimmed.slice(markerIndex + marker.length);
+  if (!base64Raw) return null;
+
+  let base64Data = '';
+  for (let i = 0; i < base64Raw.length; i += 1) {
+    const ch = base64Raw[i];
+    const isUpper = ch >= 'A' && ch <= 'Z';
+    const isLower = ch >= 'a' && ch <= 'z';
+    const isDigit = ch >= '0' && ch <= '9';
+    const isWhitespace = ch === '\r' || ch === '\n' || ch === ' ' || ch === '\t';
+    const isBase64Symbol = ch === '+' || ch === '/' || ch === '=';
+    if (isWhitespace) continue;
+    if (!(isUpper || isLower || isDigit || isBase64Symbol)) return null;
+    base64Data += ch;
+  }
+
+  if (!base64Data) return null;
+  const mimeType = mimeTypeRaw;
   return { mimeType, base64Data };
 };
 

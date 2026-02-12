@@ -11,6 +11,14 @@ const paymentLimiter = rateLimit({
   keyGenerator: (req) => `payments:${req.ip}`,
 });
 
+const webhookLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: Number(process.env.PAYMENT_WEBHOOK_RATE_LIMIT_MAX) > 0
+    ? Number(process.env.PAYMENT_WEBHOOK_RATE_LIMIT_MAX)
+    : 180,
+  keyGenerator: (req) => `payments-webhook:${req.ip}`,
+});
+
 router.post('/initialize', paymentLimiter, requireAuth, requireVerifiedUser, paymentController.initialize);
 router.get('/verify/:reference', paymentLimiter, requireAuth, requireVerifiedUser, paymentController.verify);
 router.post('/cards', paymentLimiter, requireAuth, requireVerifiedUser, paymentController.attachCard);
@@ -18,6 +26,6 @@ router.get('/cards', paymentLimiter, requireAuth, requireVerifiedUser, paymentCo
 router.patch('/cards/:cardId/default', paymentLimiter, requireAuth, requireVerifiedUser, paymentController.setDefaultCard);
 router.delete('/cards/:cardId', paymentLimiter, requireAuth, requireVerifiedUser, paymentController.deleteCard);
 router.post('/pay-with-saved-card', paymentLimiter, requireAuth, requireVerifiedUser, paymentController.payWithSavedCard);
-router.post('/webhook/paystack', paymentController.paystackWebhook);
+router.post('/webhook/paystack', webhookLimiter, paymentController.paystackWebhook);
 
 module.exports = router;

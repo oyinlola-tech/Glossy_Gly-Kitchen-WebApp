@@ -40,10 +40,9 @@ const parseDateTimeOrNull = (value) => {
 
 const generateCode = (prefix, length) => {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  const bytes = crypto.randomBytes(length);
   let suffix = '';
   for (let i = 0; i < length; i += 1) {
-    suffix += alphabet[bytes[i] % alphabet.length];
+    suffix += alphabet[crypto.randomInt(0, alphabet.length)];
   }
   return `${prefix}${suffix}`;
 };

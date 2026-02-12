@@ -15,10 +15,28 @@ const sanitizeLogField = (value, max = 512) => {
 
 const redactSensitiveQueryParams = (url) => {
   const raw = String(url || '');
-  return raw.replace(
-    /([?&](?:token|refreshToken|otp|password|authorizationCode)=)[^&]*/gi,
-    '$1[redacted]'
-  );
+  const queryStart = raw.indexOf('?');
+  if (queryStart < 0) return raw;
+
+  const pathOnly = raw.slice(0, queryStart);
+  const query = raw.slice(queryStart + 1);
+  const sensitiveKeys = new Set(['token', 'refreshtoken', 'otp', 'password', 'authorizationcode']);
+
+  const redactedParts = query.split('&').map((pair) => {
+    if (!pair) return pair;
+    const eqIndex = pair.indexOf('=');
+    const keyPart = eqIndex >= 0 ? pair.slice(0, eqIndex) : pair;
+    let keyDecoded = keyPart;
+    try {
+      keyDecoded = decodeURIComponent(keyPart.replace(/\+/g, ' '));
+    } catch (err) {
+      keyDecoded = keyPart;
+    }
+    if (!sensitiveKeys.has(String(keyDecoded).toLowerCase())) return pair;
+    return `${keyPart}=[redacted]`;
+  });
+
+  return `${pathOnly}?${redactedParts.join('&')}`;
 };
 
 const requestId = (req, res, next) => {

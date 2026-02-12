@@ -2,22 +2,21 @@ const crypto = require('crypto');
 
 const randomBase36 = (length) => {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  const bytes = crypto.randomBytes(length);
   let out = '';
   for (let i = 0; i < length; i += 1) {
-    out += alphabet[bytes[i] % alphabet.length];
+    out += alphabet[crypto.randomInt(0, alphabet.length)];
   }
   return out;
 };
 
 /**
  * Generate a unique referral code for a new user
- * Format: CHUKS + 6 random alphanumeric characters
+ * Format: OYIN + 6 random alphanumeric characters
  * @returns {string} Referral code
  */
 const generateReferralCode = () => {
   const suffix = randomBase36(6);
-  return `CHUKS${suffix}`;
+  return `OYIN${suffix}`;
 };
 
 const generateUniqueReferralCode = async (db, attempts = 10) => {
