@@ -86,6 +86,7 @@ This starts:
 - Frontend details: `src/README.md`
 - Backend details: `backend/README.md`
 - Backend API reference: `backend/API.md`
+- Security policy and disclosure process: `security.md`
 
 ## License
 This project is licensed under the terms in the root `LICENSE` file.
