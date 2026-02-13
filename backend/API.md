@@ -119,10 +119,35 @@ Admin-only full item listing.
 
 ### POST `/foods`
 Headers: admin bearer token  
-Body: `name`, `price`, optional `description`, `category`, `categoryId`, `currency`, `imageDataUrl`, `imageFileName`
+Body:
+- `name` (required)
+- `price` (required, positive number)
+- `categoryId` or `category` (one required)
+- `description` (optional)
+- `currency` (optional, only `NGN` accepted)
+- `imageDataUrl` (optional, base64 data URL)
+- `imageFileName` (optional, used for file naming)
+
+Image upload validation:
+- Supported MIME types: `image/jpeg`, `image/png`, `image/webp`, `image/gif`
+- Max payload size: `5MB`
+- Images are persisted and returned as `/uploads/<file>`
 
 ### PUT `/foods/:id`
 Headers: admin bearer token
+Body (partial update supported):
+- `name`
+- `price`
+- `description`
+- `categoryId` or `category`
+- `currency` (only `NGN` accepted)
+- `available` (boolean)
+- `imageDataUrl` + optional `imageFileName` to replace image
+- `removeImage: true` to clear existing image
+
+Notes:
+- If `imageDataUrl` is provided, current image is replaced.
+- If `removeImage` is `true` and no new image is provided, image is removed.
 
 ### DELETE `/foods/:id`
 Headers: admin bearer token

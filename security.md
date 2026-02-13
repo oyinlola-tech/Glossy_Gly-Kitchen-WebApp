@@ -27,6 +27,10 @@ Response targets:
 
 If your report is valid, we will coordinate remediation and public disclosure timing with you.
 
+Preferred initial report channel:
+- Private direct contact with the maintainer (do not disclose secrets publicly)
+- Include a safe callback method for follow-up
+
 ## Scope
 
 This policy covers:
@@ -52,6 +56,14 @@ Backend protections currently include:
 - Paystack webhook signature validation and replay protection
 - Admin action audit logging
 - Sensitive value redaction in request logs
+
+## Secret Handling Requirements
+
+- Never commit live secrets to git (`.env`, API keys, SMTP passwords, admin bootstrap keys).
+- Use `.env.example` as templates only; keep real values in local/private secret stores.
+- Rotate secrets immediately if they are exposed in logs, screenshots, chat, or commits.
+- Use distinct keys per environment (development, staging, production).
+- Limit access to payment keys and admin bootstrap keys to authorized operators only.
 
 ## Deployment Hardening Requirements
 

@@ -86,6 +86,14 @@ npm start
 - Auth and admin context consumers: `src/contexts/AuthContext.tsx`, `src/contexts/AdminAuthContext.tsx`
 - API client: `src/services/api.ts`
 
+## Recent Documentation Updates
+- Meal image management now supports:
+- `imageDataUrl` + `imageFileName` when creating/updating meals
+- `removeImage: true` when removing an existing meal image on update
+- Local development CSP allows backend-hosted meal images from `http://localhost:3000`.
+- Frontend auth forms include browser-friendly `autocomplete` attributes for email/password fields.
+- App favicon is served from `public/favicon.svg`.
+
 ## Route Inventory
 - Public auth routes: `/login`, `/signup`, `/verify-otp`, `/forgot-password`
 - User routes (protected): `/menu`, `/cart`, `/orders`, `/checkout/:orderId`, `/payment/callback`, `/profile`
@@ -104,6 +112,8 @@ npm start
 - If auth loops to login, verify JWT secret config and refresh token DB tables/migrations.
 - If payment callback fails in local HTTP, note backend accepts only `https` callback URLs when `callbackUrl` is explicitly sent.
 - If admin login asks for OTP repeatedly, verify trusted-device persistence tables/migrations.
+- If meal images fail to render in admin, verify backend is running on `http://localhost:3000` and image paths are returned as `/uploads/...`.
+- If browser warns about missing favicon, verify `public/favicon.svg` exists and clear cache.
 
 ## Documentation
 - Frontend details: `src/README.md`

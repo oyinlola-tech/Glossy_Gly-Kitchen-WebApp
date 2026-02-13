@@ -7,7 +7,7 @@ const options = {
     openapi: '3.0.3',
     info: {
       title: 'Glossy Gly Kitchen API',
-      version: '1.5.0',
+      version: '1.6.0',
       description: 'Production-ready food ordering backend API with auth, account-deletion OTP flow, admin, foods, cart, orders, payments, and disputes.',
     },
     servers: [
@@ -147,10 +147,13 @@ const options = {
           properties: {
             id: { type: 'string', format: 'uuid' },
             name: { type: 'string' },
-            price: { type: 'string' },
+            price: { type: 'number' },
             description: { type: 'string' },
             category: { type: 'string' },
-            available: { type: 'integer' },
+            categoryId: { type: 'string', format: 'uuid', nullable: true },
+            imageUrl: { type: 'string', nullable: true, description: 'Absolute URL or /uploads path' },
+            currency: { type: 'string', example: 'NGN' },
+            available: { type: 'boolean' },
           },
         },
         CreateFoodRequest: {
@@ -160,7 +163,14 @@ const options = {
             name: { type: 'string' },
             price: { type: 'number' },
             description: { type: 'string' },
+            categoryId: { type: 'string', format: 'uuid' },
             category: { type: 'string' },
+            currency: { type: 'string', enum: ['NGN'] },
+            imageDataUrl: {
+              type: 'string',
+              description: 'Base64 data URL (jpeg/png/webp/gif, max 5MB)',
+            },
+            imageFileName: { type: 'string' },
           },
         },
         UpdateFoodRequest: {
@@ -169,7 +179,15 @@ const options = {
             name: { type: 'string' },
             price: { type: 'number' },
             description: { type: 'string' },
+            categoryId: { type: 'string', format: 'uuid' },
             category: { type: 'string' },
+            currency: { type: 'string', enum: ['NGN'] },
+            imageDataUrl: {
+              type: 'string',
+              description: 'Base64 data URL (jpeg/png/webp/gif, max 5MB)',
+            },
+            imageFileName: { type: 'string' },
+            removeImage: { type: 'boolean' },
             available: { type: 'boolean' },
           },
         },
@@ -438,6 +456,60 @@ const options = {
             '400': { description: 'Invalid credentials' },
             '403': { description: 'Not verified' },
             '404': { description: 'Not found' },
+          },
+        },
+      },
+      '/auth/google': {
+        post: {
+          tags: ['Auth'],
+          summary: 'Login/register with Google',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['idToken'],
+                  properties: {
+                    idToken: { type: 'string' },
+                    deviceId: { type: 'string' },
+                    referralCode: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { description: 'Authenticated' },
+            '400': { description: 'Validation error' },
+            '401': { description: 'Invalid token' },
+          },
+        },
+      },
+      '/auth/apple': {
+        post: {
+          tags: ['Auth'],
+          summary: 'Login/register with Apple',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['identityToken'],
+                  properties: {
+                    identityToken: { type: 'string' },
+                    deviceId: { type: 'string' },
+                    referralCode: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { description: 'Authenticated' },
+            '400': { description: 'Validation error' },
+            '401': { description: 'Invalid token' },
           },
         },
       },
@@ -729,6 +801,102 @@ const options = {
           },
         },
       },
+      '/foods/categories': {
+        get: {
+          tags: ['Foods'],
+          summary: 'List food categories',
+          responses: {
+            '200': { description: 'OK' },
+          },
+        },
+        post: {
+          tags: ['Foods'],
+          summary: 'Create food category (Admin)',
+          security: [{ adminBearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['name'],
+                  properties: {
+                    name: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '201': { description: 'Created' },
+            '400': { description: 'Validation error' },
+            '401': { description: 'Unauthorized' },
+          },
+        },
+      },
+      '/foods/categories/{id}': {
+        put: {
+          tags: ['Foods'],
+          summary: 'Update food category (Admin)',
+          security: [{ adminBearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['name'],
+                  properties: {
+                    name: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { description: 'Updated' },
+            '400': { description: 'Validation error' },
+            '404': { description: 'Category not found' },
+          },
+        },
+        delete: {
+          tags: ['Foods'],
+          summary: 'Delete food category (Admin)',
+          security: [{ adminBearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            '200': { description: 'Deleted' },
+            '404': { description: 'Category not found' },
+            '409': { description: 'Category has meals assigned' },
+          },
+        },
+      },
+      '/foods/admin/all': {
+        get: {
+          tags: ['Foods'],
+          summary: 'List all foods for admin including unavailable items',
+          security: [{ adminBearerAuth: [] }],
+          responses: {
+            '200': { description: 'OK' },
+            '401': { description: 'Unauthorized' },
+          },
+        },
+      },
       '/foods/{id}': {
         get: {
           tags: ['Foods'],
@@ -944,6 +1112,109 @@ const options = {
             },
             '401': { description: 'Unauthorized' },
             '404': { description: 'Not found' },
+          },
+        },
+      },
+      '/orders/addresses': {
+        get: {
+          tags: ['Orders'],
+          summary: 'List saved delivery addresses for current user',
+          security: [{ bearerAuth: [] }],
+          responses: {
+            '200': { description: 'OK' },
+            '401': { description: 'Unauthorized' },
+          },
+        },
+        post: {
+          tags: ['Orders'],
+          summary: 'Create a saved delivery address',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['recipientName', 'phone', 'addressLine1', 'city', 'state'],
+                  properties: {
+                    label: { type: 'string' },
+                    recipientName: { type: 'string' },
+                    phone: { type: 'string' },
+                    addressLine1: { type: 'string' },
+                    addressLine2: { type: 'string' },
+                    city: { type: 'string' },
+                    state: { type: 'string' },
+                    country: { type: 'string' },
+                    postalCode: { type: 'string' },
+                    notes: { type: 'string' },
+                    isDefault: { type: 'boolean' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '201': { description: 'Created' },
+            '400': { description: 'Validation error' },
+          },
+        },
+      },
+      '/orders/addresses/{addressId}': {
+        put: {
+          tags: ['Orders'],
+          summary: 'Update a saved delivery address',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'addressId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    label: { type: 'string' },
+                    recipientName: { type: 'string' },
+                    phone: { type: 'string' },
+                    addressLine1: { type: 'string' },
+                    addressLine2: { type: 'string' },
+                    city: { type: 'string' },
+                    state: { type: 'string' },
+                    country: { type: 'string' },
+                    postalCode: { type: 'string' },
+                    notes: { type: 'string' },
+                    isDefault: { type: 'boolean' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { description: 'Updated' },
+            '404': { description: 'Address not found' },
+          },
+        },
+        delete: {
+          tags: ['Orders'],
+          summary: 'Delete a saved delivery address',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'addressId',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            '200': { description: 'Deleted' },
+            '404': { description: 'Address not found' },
           },
         },
       },
@@ -1174,7 +1445,7 @@ const options = {
           },
         },
       },
-      '/payments/cards/{cardId}': {
+      '/payments/cards/{cardId}/default': {
         patch: {
           tags: ['Payments'],
           summary: 'Set default saved card',
@@ -1192,6 +1463,8 @@ const options = {
             '404': { description: 'Card not found' },
           },
         },
+      },
+      '/payments/cards/{cardId}': {
         delete: {
           tags: ['Payments'],
           summary: 'Delete a saved card',

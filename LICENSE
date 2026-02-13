@@ -67,3 +67,8 @@ This License constitutes the entire agreement between You and the Author regardi
 15. Versioning
 15.1 This is Glossy-Gly-Kitchen Proprietary License v1.0.
 15.2 The Author may publish updated license versions for future releases of the Software.
+
+16. Security and Secret Notice
+16.1 This repository may reference environment-based secrets for local or production operation.
+16.2 No license grant is made to any secret, credential, API key, or token value that may appear in configuration examples.
+16.3 You are solely responsible for securing your own credentials and complying with third-party provider terms.
