@@ -52,7 +52,7 @@
             "@types/react": "^19.2.14",
             "@types/react-dom": "^19.2.3",
             "@vitejs/plugin-react-swc": "^3.10.2",
-            "vite": "^6.4.1"
+            "vite": "^6.4.2"
       },
       "scripts": {
             "start": "vite preview --host 0.0.0.0 --port 4173",
